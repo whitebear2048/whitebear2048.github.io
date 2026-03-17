@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>固体物理学可视化 · 主页</title>
+    <style>
+        /* 全局重置与基础样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #ffffff;      /* 纯白背景 */
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #1e2b3c;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* 主要内容容器，限制最大宽度，居中显示 */
+        .main-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 3rem 2rem 2rem 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 页头区域 */
+        header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 400;
+            letter-spacing: 1px;
+            color: #0a1a2b;
+            margin-bottom: 0.75rem;
+            line-height: 1.2;
+        }
+
+        .subhead {
+            font-size: 1.25rem;
+            color: #3e5a70;
+            max-width: 700px;
+            margin: 0 auto;
+            font-weight: 350;
+            border-bottom: 1px solid #e6ecf2;
+            padding-bottom: 1.5rem;
+        }
+
+        /* 按钮网格区域 */
+        .button-section {
+            flex: 1 0 auto;        /* 占用剩余空间，让footer自然在底部（可选） */
+            margin: 2.5rem 0 3rem 0;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.8rem;
+            justify-content: center;
+        }
+
+        /* 可视化按钮样式 */
+        .vis-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background-color: #f2f6f9;      /* 极浅灰蓝，柔和 */
+            padding: 1.2rem 1rem;
+            border-radius: 50px;              /* 大圆角，现代感 */
+            text-decoration: none;
+            color: #0f2b3f;
+            font-weight: 500;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 20, 30, 0.04);
+            border: 1px solid rgba(180, 200, 220, 0.3);
+            min-height: 80px;                  /* 统一高度，视觉整齐 */
+            word-break: break-word;            /* 处理极长文本（如有） */
+            line-height: 1.4;
+        }
+
+        .vis-button:hover {
+            background-color: #e0eaf3;          /* 略微加深 */
+            box-shadow: 0 10px 18px rgba(20, 60, 100, 0.12);
+            transform: translateY(-2px);
+            border-color: #b0c8dd;
+            color: #0a1e2e;
+        }
+
+        /* 底部footer */
+        footer {
+            text-align: center;
+            border-top: 1px solid #dce5ed;
+            padding-top: 2rem;
+            margin-top: 1.5rem;
+            color: #4a5f73;
+            font-size: 1rem;
+        }
+
+        footer p {
+            margin: 0.2rem 0;
+            font-weight: 350;
+            letter-spacing: 0.3px;
+        }
+
+        /* 学校与课程组强调 */
+        .institution {
+            font-size: 1.1rem;
+            color: #1d3e5e;
+            font-weight: 420;
+        }
+
+        .course-term {
+            font-size: 1rem;
+            color: #476b87;
+        }
+
+        /* 占位注释在HTML中可见，不影响样式 */
+        .comment-hint {
+            display: none;   /* 隐藏只作为注释用的视觉元素，但我们在html中直接用<!-- --> */
+        }
+
+        /* 响应式微调 */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            .subhead {
+                font-size: 1.1rem;
+            }
+            .vis-button {
+                font-size: 1.1rem;
+                padding: 1rem 0.8rem;
+                min-height: 70px;
+            }
+            .main-container {
+                padding: 2rem 1.2rem 1.5rem 1.2rem;
+            }
+            .button-grid {
+                gap: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 标题区域 -->
+        <header>
+            <h1>⚛️ 固体物理学可视化</h1>
+            <div class="subhead">
+                本站提供固体物理课程中各类可视化网页，供各位同学学习，随课程进度更新。
+	网页点击后可根据提示说明操作。
+            </div>
+        </header>
+
+        <!-- 按钮区域：现有三个，同时预留添加位置 (注释说明如何扩展) -->
+        <section class="button-section">
+            <!-- 
+                ========== 扩展指南 ==========
+                预计总共放置约10个按钮。
+                如需添加新按钮，请直接在下面的 .button-grid 内复制一行 
+                <a class="vis-button" href="你的链接" target="_blank" rel="noopener">按钮文字</a>
+                并替换 href 和 文字内容 即可。网格会自动排列整齐。
+                示例：
+                <a class="vis-button" href="https://example.com/new" target="_blank" rel="noopener">新晶体结构</a>
+                ================================
+            -->
+            <div class="button-grid">
+                <!-- 已有按钮 1 : 金刚石结构 -->
+                <a class="vis-button" href="https://whitebear2048.github.io/diamond.html" target="_blank" rel="noopener">
+                    金刚石结构
+                </a>
+
+                <!-- 已有按钮 2 : 三种基本晶体结构 -->
+                <a class="vis-button" href="https://whitebear2048.github.io/basic-structure.html" target="_blank" rel="noopener">
+                    三种基本晶体结构
+                </a>
+
+                <!-- 已有按钮 3 : 简立方晶向 -->
+                <a class="vis-button" href="https://whitebear2048.github.io/crystal-direction.html" target="_blank" rel="noopener">
+                    简立方晶向
+                </a>
+
+                <!-- 
+                    此处为预留添加位 —— 未来新按钮可直接加在下面，保持相同class。
+                    预计第4~10个按钮：
+                    <a class="vis-button" href="https://..." target="_blank" rel="noopener">新模块名称</a>
+                    <a class="vis-button" href="https://..." target="_blank" rel="noopener">另一模块</a>
+                    ......
+                -->
+            </div>
+            <!-- 附加提示：注释行对用户不可见，但维护者一看便知 -->
+            <!-- 提示：现在已有3个按钮，最多可继续添加7个，保持网格美观 -->
+        </section>
+
+        <!-- 底部信息（固定两行） -->
+        <footer>
+            <p class="institution">南京信息工程大学 · 集成电路学院</p>
+            <p class="course-term">2025-2026-2 @ 固体物理学课程组</p>
+        </footer>
+    </div>
+
+    <!-- 额外的开发注释： 
+         1. 所有可视化链接均设置 target="_blank" 在新标签页打开，避免离开主页。
+         2. 按钮样式统一使用 .vis-button，方便批量修改。
+         3. 白色背景保证简洁，微阴影和悬浮效果提升交互感。
+         4. 底部信息已按要求准确显示。
+    -->
+</body>
+</html>
