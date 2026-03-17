@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>金刚石结构晶胞 3D 可视化（最终精准版）</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f8f8f8; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        .info-panel {
+            position: fixed; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 320px;
+            z-index: 100;
+        }
+        .info-panel h4 { color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .info-panel p { color: #666; font-size: 14px; line-height: 1.6; margin: 5px 0; }
+        .control-btn {
+            position: fixed; padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 14px; border: none; color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100;
+            transition: background 0.3s;
+        }
+        .control-btn:hover { filter: brightness(0.9); }
+        .control-btn.active { background: #993399; }
+        /* 按钮布局调整：新增第三个按钮位置 */
+        #toggleExtendBtn { top: 20px; right: 20px; background: #3366ff; }
+        #toggleAllFcc2Btn { top: 70px; right: 20px; background: #ff6633; }
+        #toggleFcc1Btn { top: 120px; right: 20px; background: #339966; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div class="info-panel">
+        <h4>金刚石晶胞（双FCC嵌套版）</h4>
+        <p>📐 晶格常数 a = 2（放大便于观察）</p>
+        <p>🔢 结构特征：两个FCC沿对角线位移1/4嵌套</p>
+        <p>• 蓝色外框：FCC1（金刚石顶点+面心）</p>
+        <p>• 紫色外框：FCC2（金刚石体内原子）</p>
+        <p>• 黑色/深灰：FCC1原子 | 紫色：FCC2原子</p>
+        <p>🖱️ 操作：左键旋转 | 滚轮缩放 | 右键平移</p>
+        <p>🔘 按钮1：显示金刚石结构</p>
+        <p>🔘 按钮2：隐藏紫色FCC</p>
+        <p>🔘 按钮3：隐藏黑色FCC</p> <!-- 新增说明 -->
+    </div>
+    <!-- 新增第三个控制按钮 -->
+    <button class="control-btn" id="toggleExtendBtn">显示金刚石结构</button>
+    <button class="control-btn" id="toggleAllFcc2Btn">隐藏紫色FCC</button>
+    <button class="control-btn" id="toggleFcc1Btn">隐藏黑色FCC</button> <!-- 新增按钮 -->
+
+    <!-- ES Module配置 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ========== 1. 基础初始化 ==========
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+        camera.position.set(4, 4, 6);
+        camera.lookAt(1, 1, 1);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xf8f8f8);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.target.set(1, 1, 1);
+
+        // 辅助元素
+        scene.add(new THREE.AxesHelper(4));
+        scene.add(new THREE.GridHelper(8, 16, 0xe0e0e0, 0xf0f0f0));
+
+        // ========== 2. 核心参数（晶体学精准定义） ==========
+        const a = 2; // 晶格常数
+        const d = a/4; // 位移量（1/4晶格常数）
+        
+        // 原子组管理（新增全量FCC2原子管理）
+        const groups = {
+            // 始终显示的核心元素（改为可隐藏）
+            core: {
+                fcc1Atoms: [],    // FCC1所有原子（金刚石顶点+面心）
+                bonds: [],         // 化学键
+                fcc1Frame: null    // FCC1框
+            },
+            // 可隐藏的扩展元素
+            extend: {
+                fcc2ExtendAtoms: [], // FCC2的非核心扩展原子
+                fcc2Frame: null      // FCC2框
+            },
+            // 所有FCC2原子（核心+扩展）
+            allFcc2: {
+                fcc2CoreAtoms: [], // FCC2核心4个原子
+                fcc2AllAtoms: []   // FCC2所有原子（核心+扩展，快捷引用）
+            }
+        };
+
+        // ========== 3. 原子坐标定义（完全精准） ==========
+        // FCC1：基础面心立方（金刚石的顶点+面心）
+        const fcc1 = {
+            vertex: [[0,0,0],[a,0,0],[0,a,0],[0,0,a],[a,a,0],[a,0,a],[0,a,a],[a,a,a]],
+            face: [[a/2,a/2,0],[a/2,a/2,a],[a/2,0,a/2],[a/2,a,a/2],[0,a/2,a/2],[a,a/2,a/2]]
+        };
+
+        // FCC2：位移1/4的面心立方（完整顶点+面心）
+        const fcc2 = {
+            vertex: fcc1.vertex.map(p => [p[0]+d, p[1]+d, p[2]+d]),
+            face: fcc1.face.map(p => [p[0]+d, p[1]+d, p[2]+d])
+        };
+
+        // 金刚石核心：FCC2中位于0-2范围内的4个原子
+        const diamondCore = [
+            [d,d,d],        // (0.5,0.5,0.5)
+            [3*d,3*d,d],    // (1.5,1.5,0.5)
+            [3*d,d,3*d],    // (1.5,0.5,1.5)
+            [d,3*d,3*d]     // (0.5,1.5,1.5)
+        ];
+
+        // ========== 4. 材质定义 ==========
+        const mats = {
+            fcc1Vertex: new THREE.MeshLambertMaterial({ color: 0x222222 }), // 黑色
+            fcc1Face: new THREE.MeshLambertMaterial({ color: 0x444444 }),   // 深灰
+            fcc2Core: new THREE.MeshLambertMaterial({ color: 0x993399 }),   // 深紫（核心）
+            fcc2Extend: new THREE.MeshLambertMaterial({ color: 0xcc66cc }), // 浅紫（扩展）
+            bond: new THREE.LineBasicMaterial({ color: 0x888888, linewidth: 2 }),
+            frame1: new THREE.LineBasicMaterial({ color: 0x3366ff, linewidth: 2 }),
+            frame2: new THREE.LineBasicMaterial({ color: 0x993399, linewidth: 2, transparent: true, opacity: 0.8 })
+        };
+
+        // 几何体
+        const atomGeo = new THREE.SphereGeometry(0.08, 24, 24);
+        const coreGeo = new THREE.SphereGeometry(0.1, 24, 24); // 核心原子放大
+
+        // ========== 5. 绘制核心元素 ==========
+        // 5.1 绘制FCC1原子
+        fcc1.vertex.forEach(pos => {
+            const atom = new THREE.Mesh(atomGeo, mats.fcc1Vertex);
+            atom.position.set(...pos);
+            scene.add(atom);
+            groups.core.fcc1Atoms.push(atom);
+        });
+        fcc1.face.forEach(pos => {
+            const atom = new THREE.Mesh(atomGeo, mats.fcc1Face);
+            atom.position.set(...pos);
+            scene.add(atom);
+            groups.core.fcc1Atoms.push(atom);
+        });
+
+        // 5.2 绘制FCC2核心原子（金刚石体内）
+        diamondCore.forEach(pos => {
+            const atom = new THREE.Mesh(coreGeo, mats.fcc2Core);
+            atom.position.set(...pos);
+            scene.add(atom);
+            groups.allFcc2.fcc2CoreAtoms.push(atom);
+            groups.allFcc2.fcc2AllAtoms.push(atom); // 加入全量列表
+        });
+
+        // 5.3 绘制晶胞框
+        const cubeGeo = new THREE.BoxGeometry(a, a, a);
+        const cubeEdges = new THREE.EdgesGeometry(cubeGeo);
+        
+        // FCC1框（蓝色）
+        const frame1 = new THREE.LineSegments(cubeEdges, mats.frame1);
+        frame1.position.set(a/2, a/2, a/2);
+        scene.add(frame1);
+        groups.core.fcc1Frame = frame1;
+
+        // FCC2框（紫色，可隐藏）
+        const frame2 = new THREE.LineSegments(cubeEdges, mats.frame2);
+        frame2.position.set(a/2+d, a/2+d, a/2+d);
+        scene.add(frame2);
+        groups.extend.fcc2Frame = frame2;
+
+        // 5.4 绘制化学键
+        const bondPairs = [
+            [diamondCore[0], fcc1.vertex[0]], [diamondCore[0], fcc1.face[0]], [diamondCore[0], fcc1.face[2]], [diamondCore[0], fcc1.face[4]],
+            [diamondCore[1], fcc1.face[0]], [diamondCore[1], fcc1.vertex[4]], [diamondCore[1], fcc1.face[5]], [diamondCore[1], fcc1.face[3]],
+            [diamondCore[2], fcc1.face[2]], [diamondCore[2], fcc1.vertex[5]], [diamondCore[2], fcc1.face[5]], [diamondCore[2], fcc1.face[1]],
+            [diamondCore[3], fcc1.face[4]], [diamondCore[3], fcc1.vertex[6]], [diamondCore[3], fcc1.face[3]], [diamondCore[3], fcc1.face[1]]
+        ];
+
+        bondPairs.forEach(([p1, p2]) => {
+            const geo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(...p1),
+                new THREE.Vector3(...p2)
+            ]);
+            const bond = new THREE.Line(geo, mats.bond);
+            scene.add(bond);
+            groups.core.bonds.push(bond);
+        });
+
+        // ========== 6. 绘制FCC2扩展原子 ==========
+        const fcc2AllAtoms = [...fcc2.vertex, ...fcc2.face];
+        fcc2AllAtoms.forEach(pos => {
+            const isCore = diamondCore.some(core => 
+                core[0] === pos[0] && core[1] === pos[1] && core[2] === pos[2]
+            );
+            if (!isCore) {
+                const atom = new THREE.Mesh(atomGeo, mats.fcc2Extend);
+                atom.position.set(...pos);
+                scene.add(atom);
+                groups.extend.fcc2ExtendAtoms.push(atom);
+                groups.allFcc2.fcc2AllAtoms.push(atom); // 加入全量列表
+            }
+        });
+
+        // ========== 7. 按钮控制逻辑 ==========
+        // 按钮1：隐藏/显示FCC2扩展原子+紫色框
+        const toggleExtendBtn = document.getElementById('toggleExtendBtn');
+        let isExtendHidden = false;
+        toggleExtendBtn.addEventListener('click', () => {
+            isExtendHidden = !isExtendHidden;
+            
+            if (isExtendHidden) {
+                groups.extend.fcc2ExtendAtoms.forEach(atom => atom.visible = false);
+                groups.extend.fcc2Frame.visible = false;
+                toggleExtendBtn.textContent = "显示套构";
+                toggleExtendBtn.classList.add('active');
+            } else {
+                groups.extend.fcc2ExtendAtoms.forEach(atom => atom.visible = true);
+                groups.extend.fcc2Frame.visible = true;
+                toggleExtendBtn.textContent = "显示金刚石晶胞";
+                toggleExtendBtn.classList.remove('active');
+            }
+
+            // 确保核心元素显示（排除FCC1，由按钮3控制）
+            groups.allFcc2.fcc2CoreAtoms.forEach(atom => atom.visible = true);
+            
+            // 化学键显示逻辑：仅当FCC1未隐藏时显示
+            if (!isFcc1Hidden) {
+                groups.core.bonds.forEach(bond => bond.visible = true);
+            }
+            
+            // 如果FCC1未被隐藏，则显示FCC1
+            if (!isFcc1Hidden) {
+                groups.core.fcc1Atoms.forEach(atom => atom.visible = true);
+                groups.core.fcc1Frame.visible = true;
+            }
+        });
+
+        // 按钮2：隐藏/显示所有FCC2原子+紫色框
+        const toggleAllFcc2Btn = document.getElementById('toggleAllFcc2Btn');
+        let isAllFcc2Hidden = false;
+        toggleAllFcc2Btn.addEventListener('click', () => {
+            isAllFcc2Hidden = !isAllFcc2Hidden;
+            
+            if (isAllFcc2Hidden) {
+                // 隐藏所有FCC2原子 + FCC2框 + 化学键
+                groups.allFcc2.fcc2AllAtoms.forEach(atom => atom.visible = false);
+                groups.extend.fcc2Frame.visible = false;
+                groups.core.bonds.forEach(bond => bond.visible = false); // 化学键随FCC2隐藏
+                toggleAllFcc2Btn.textContent = "显示紫色FCC";
+                toggleAllFcc2Btn.classList.add('active');
+            } else {
+                // 显示所有FCC2原子 + FCC2框 + 化学键（仅当FCC1未隐藏时）
+                groups.allFcc2.fcc2AllAtoms.forEach(atom => atom.visible = true);
+                groups.extend.fcc2Frame.visible = true;
+                if (!isFcc1Hidden) {
+                    groups.core.bonds.forEach(bond => bond.visible = true);
+                }
+                toggleAllFcc2Btn.textContent = "隐藏紫色FCC";
+                toggleAllFcc2Btn.classList.remove('active');
+            }
+
+            // 始终保留FCC1（除非按钮3已隐藏）
+            if (!isFcc1Hidden) {
+                groups.core.fcc1Atoms.forEach(atom => atom.visible = true);
+                groups.core.fcc1Frame.visible = true;
+            }
+            
+            // 同步按钮1状态（如果按钮1已隐藏扩展原子，保持隐藏）
+            if (isExtendHidden) {
+                groups.extend.fcc2ExtendAtoms.forEach(atom => atom.visible = false);
+            }
+        });
+
+        // 新增按钮3：隐藏/显示黑色FCC1（原子+蓝色框）+ 同步隐藏/显示化学键
+        const toggleFcc1Btn = document.getElementById('toggleFcc1Btn');
+        let isFcc1Hidden = false;
+        toggleFcc1Btn.addEventListener('click', () => {
+            isFcc1Hidden = !isFcc1Hidden;
+            
+            if (isFcc1Hidden) {
+                // 隐藏FCC1原子 + FCC1框 + 化学键
+                groups.core.fcc1Atoms.forEach(atom => atom.visible = false);
+                groups.core.fcc1Frame.visible = false;
+                groups.core.bonds.forEach(bond => bond.visible = false); // 新增：隐藏化学键
+                toggleFcc1Btn.textContent = "显示黑色FCC";
+                toggleFcc1Btn.classList.add('active');
+            } else {
+                // 显示FCC1原子 + FCC1框 + 化学键（仅当FCC2未隐藏时）
+                groups.core.fcc1Atoms.forEach(atom => atom.visible = true);
+                groups.core.fcc1Frame.visible = true;
+                if (!isAllFcc2Hidden) {
+                    groups.core.bonds.forEach(bond => bond.visible = true); // 新增：显示化学键
+                }
+                toggleFcc1Btn.textContent = "隐藏黑色FCC";
+                toggleFcc1Btn.classList.remove('active');
+            }
+
+            // 保留FCC2相关元素（除非其他按钮已隐藏）
+            if (!isAllFcc2Hidden) {
+                groups.allFcc2.fcc2AllAtoms.forEach(atom => atom.visible = true);
+                groups.extend.fcc2Frame.visible = !isExtendHidden; // 跟随按钮1状态
+            }
+            // 同步按钮1状态
+            if (isExtendHidden) {
+                groups.extend.fcc2ExtendAtoms.forEach(atom => atom.visible = false);
+            }
+        });
+
+        // ========== 8. 光源与自适应 ==========
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        pointLight.position.set(5, 5, 7);
+        scene.add(pointLight);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 控制台验证
+        console.log("✅ 最终版验证：");
+        console.log(`FCC1原子数：${groups.core.fcc1Atoms.length} (8顶点+6面心)`);
+        console.log(`FCC2核心原子数：${groups.allFcc2.fcc2CoreAtoms.length}`);
+        console.log(`FCC2扩展原子数：${groups.extend.fcc2ExtendAtoms.length}`);
+        console.log(`FCC2总原子数：${groups.allFcc2.fcc2AllAtoms.length}`);
+        console.log(`化学键数：${groups.core.bonds.length}`);
+    </script>
+</body>
+</html>
