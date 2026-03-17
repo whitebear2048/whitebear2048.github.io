@@ -2,32 +2,129 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>三种立方布拉伐格子</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f8f8; overflow: hidden; }
         #canvas-container { width: 100vw; height: 100vh; }
         
-        .info-panel {
-            position: fixed; top: 20px; left: 20px;
-            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 320px;
+        /* 面板通用样式 (调整为移动端友好) */
+        .info-panel, .lattice-selector {
+            position: fixed;
+            background: rgba(255,255,255,0.95);
+            border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
             z-index: 100;
+            transition: all 0.2s ease;
+            max-width: 320px;           /* 默认最大宽度 */
+            backdrop-filter: blur(5px);
         }
-        .info-panel h4 { color: #333; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        
+        /* 面板头部 — 可点击折叠区域 */
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 8px 8px 0 0;
+        }
+        .panel-header h4 {
+            color: #333;
+            font-size: 1rem;
+            margin: 0;
+            padding: 0;
+            border-bottom: none;
+            flex: 1;
+        }
+        .panel-header .collapse-icon {
+            font-size: 1.2rem;
+            color: #666;
+            margin-left: 10px;
+            transition: transform 0.2s;
+            width: 20px;
+            text-align: center;
+        }
+        
+        /* 面板主体 (可隐藏) */
+        .panel-body {
+            padding: 0 15px 15px 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        /* 折叠状态：隐藏主体 */
+        .collapsed .panel-body {
+            display: none;
+        }
+        .collapsed .panel-header {
+            border-radius: 8px;  /* 折叠时全部圆角 */
+        }
+        
+        /* 左侧信息面板 */
+        .info-panel {
+            top: 20px;
+            left: 20px;
+        }
+        /* 右侧选择面板 */
+        .lattice-selector {
+            top: 20px;
+            right: 20px;
+            width: 280px;
+        }
+        
+        /* 移动端 (宽度小于768px) 自动适配：缩小面板，左右分开避免重叠 */
+        @media screen and (max-width: 768px) {
+            .info-panel, .lattice-selector {
+                max-width: 45%;              /* 限制宽度 */
+                min-width: 160px;             /* 确保标题可读 */
+                font-size: 0.9rem;
+                backdrop-filter: blur(8px);
+                background: rgba(255,255,255,0.97);
+            }
+            .info-panel {
+                left: 10px;
+                right: auto;
+            }
+            .lattice-selector {
+                right: 10px;
+                left: auto;
+                width: auto;                  /* 自适应宽度 */
+            }
+            .panel-header h4 {
+                font-size: 0.9rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            /* 右侧标题里的span小字适当隐藏或缩小 */
+            .panel-header h4 span {
+                font-size: 0.7rem !important;
+            }
+            /* 面板内容内边距稍微缩小 */
+            .panel-body {
+                padding: 8px 10px 10px 10px;
+            }
+            /* 按钮字体小一点 */
+            .lattice-btn, #toggleModeBtn, #resetColorsBtn {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+        }
+        
+        /* 更小屏幕时只保留图标性文字 */
+        @media screen and (max-width: 480px) {
+            .info-panel .panel-header h4 {
+                white-space: normal;
+                line-height: 1.3;
+                max-width: 140px;
+            }
+        }
+
+        /* 原有样式保留 */
         .info-panel p { color: #666; font-size: 14px; line-height: 1.6; margin: 5px 0; }
         
-        .lattice-selector {
-            position: fixed; top: 20px; right: 20px;
-            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1); width: 280px;
-            z-index: 100;
-        }
-        .lattice-selector h4 { 
-            color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;
-            display: flex; justify-content: space-between; align-items: center;
-        }
         .lattice-btn {
             display: block; width: 100%; padding: 8px 10px; margin: 4px 0;
             border: 1px solid #ddd; border-radius: 4px; background: #fff;
@@ -53,38 +150,19 @@
         #toggleModeBtn.packing-mode { background: #dc3545; }
         #toggleModeBtn.packing-mode:hover { background: #c82333; }
 
-        /* 原胞显示复选框 */
-        .primitive-option {
+        .primitive-option, .bcc-extend-option {
             margin-top: 10px;
             padding: 8px 0;
             border-top: 1px solid #eee;
         }
-        .primitive-option label {
+        .primitive-option label, .bcc-extend-option label {
             font-size: 14px;
             color: #333;
             cursor: pointer;
             display: flex;
             align-items: center;
         }
-        .primitive-option input {
-            margin-right: 8px;
-            cursor: pointer;
-        }
-
-        /* BCC扩展晶胞开关 */
-        .bcc-extend-option {
-            margin-top: 8px;
-            padding: 8px 0;
-            border-top: 1px solid #eee;
-        }
-        .bcc-extend-option label {
-            font-size: 14px;
-            color: #333;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-        }
-        .bcc-extend-option input {
+        .primitive-option input, .bcc-extend-option input {
             margin-right: 8px;
             cursor: pointer;
         }
@@ -109,6 +187,15 @@
         .control-btn:hover { filter: brightness(0.9); }
         #resetViewBtn { bottom: 20px; right: 20px; background: #3366ff; }
         #toggleAtomsBtn { bottom: 70px; right: 20px; background: #ff6633; }
+
+        /* 移动端控制按钮稍微小一点 */
+        @media screen and (max-width: 768px) {
+            .control-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+            #toggleAtomsBtn { bottom: 60px; }
+        }
     </style>
 
     <!-- ES Module配置 -->
@@ -124,47 +211,57 @@
 <body>
     <div id="canvas-container"></div>
     
-    <!-- 信息面板 -->
-    <div class="info-panel">
-        <h4>三种立方布拉伐格子 · 原胞显示 + 原子点击高亮</h4>
-        <p>📐 标准模式：原子小球 + 晶胞框架 (蓝色) + 可选原胞 (红色)</p>
-        <p>🔴 堆积模式：原子球相切，<strong>点击原子变红</strong>，可重置</p>
-        <p>• 简单立方：顶点原子相切，正方排列</p>
-        <p>• 体心立方：体心原子与顶点原子相切</p>
-        <p>• 面心立方：顶点与面心原子相切，密堆积</p>
-        <p>🖱️ 左键旋转 | 滚轮缩放 | 右键平移 | 点击原子变色</p>
-        <p>📌 体心立方扩展：显示原胞3个外部顶点为体心的BCC晶胞 (浅蓝色)</p>
-    </div>
-    
-    <!-- 格子选择器 (只保留前三种) -->
-    <div class="lattice-selector">
-        <h4>选择晶格 <span style="font-size:12px; color:#666;">(前三种)</span></h4>
-        <button class="lattice-btn active" data-type="simple-cubic">1. 简单立方</button>
-        <button class="lattice-btn" data-type="body-centered-cubic">2. 体心立方</button>
-        <button class="lattice-btn" data-type="face-centered-cubic">3. 面心立方</button>
-        
-        <!-- 原胞显示复选框 (标准模式下有效) -->
-        <div class="primitive-option">
-            <label>
-                <input type="checkbox" id="showPrimitiveCheck" checked> 显示原胞（标准模式，红色）
-            </label>
+    <!-- 左侧信息面板 (改造为折叠式) -->
+    <div class="info-panel" id="infoPanel">
+        <div class="panel-header">
+            <h4>操作说明</h4>
+            <span class="collapse-icon">▼</span>
         </div>
-        
-        <!-- BCC扩展晶胞开关 -->
-        <div class="bcc-extend-option">
-            <label>
-                <input type="checkbox" id="showBCCExtendCheck" checked> 显示BCC扩展晶胞（浅蓝色）
-            </label>
-        </div>
-        
-        <!-- 模式切换和重置按钮 -->
-        <div class="mode-toggle">
-            <button id="toggleModeBtn">切换到 堆积模式</button>
-            <button id="resetColorsBtn">重置原子颜色 (堆积模式)</button>
+        <div class="panel-body">
+            <p>📐 标准模式：原子小球 + 晶胞框架 (蓝色) + 可选原胞 (红色)</p>
+            <p>🔴 堆积模式：原子球相切，<strong>点击原子变红</strong>，可重置</p>
+            <p>• 简单立方：顶点原子相切，正方排列</p>
+            <p>• 体心立方：体心原子与顶点原子相切</p>
+            <p>• 面心立方：顶点与面心原子相切，密堆积</p>
+            <p>🖱️ 左键旋转 | 滚轮缩放 | 右键平移 | 点击原子变色</p>
+            <p>📌 体心立方扩展：显示原胞3个外部顶点为体心的BCC晶胞 (浅蓝色)</p>
         </div>
     </div>
     
-    <!-- 控制按钮 -->
+    <!-- 右侧选择面板 (改造为折叠式) -->
+    <div class="lattice-selector" id="latticeSelector">
+        <div class="panel-header">
+            <h4>选择晶格 <span style="font-size:12px; color:#666;">(前三种)</span></h4>
+            <span class="collapse-icon">▼</span>
+        </div>
+        <div class="panel-body">
+            <button class="lattice-btn active" data-type="simple-cubic">1. 简单立方</button>
+            <button class="lattice-btn" data-type="body-centered-cubic">2. 体心立方</button>
+            <button class="lattice-btn" data-type="face-centered-cubic">3. 面心立方</button>
+            
+            <!-- 原胞显示复选框 -->
+            <div class="primitive-option">
+                <label>
+                    <input type="checkbox" id="showPrimitiveCheck" checked> 显示原胞（红色）
+                </label>
+            </div>
+            
+            <!-- BCC扩展晶胞开关 -->
+            <div class="bcc-extend-option">
+                <label>
+                    <input type="checkbox" id="showBCCExtendCheck" checked> 显示BCC扩展晶胞（浅蓝色）
+                </label>
+            </div>
+            
+            <!-- 模式切换和重置按钮 -->
+            <div class="mode-toggle">
+                <button id="toggleModeBtn">切换到 堆积模式</button>
+                <button id="resetColorsBtn">重置原子颜色 (堆积模式)</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 控制按钮 (保持不变) -->
     <button class="control-btn" id="resetViewBtn">重置视图</button>
     <button class="control-btn" id="toggleAtomsBtn">隐藏原子</button>
 
@@ -172,7 +269,7 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // ========== 1. 基础初始化 ==========
+        // ========== 1. 基础初始化 (与原来完全相同) ==========
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
         camera.position.set(4, 4, 6);
@@ -188,29 +285,25 @@
         controls.dampingFactor = 0.08;
         controls.target.set(0, 0, 0);
 
-        // 辅助元素
         scene.add(new THREE.AxesHelper(4));
         scene.add(new THREE.GridHelper(8, 16, 0xd0d0d0, 0xe0e0e0));
 
         // ========== 2. 材质与几何体 ==========
         const materials = {
-            // 标准模式
             frame: new THREE.LineBasicMaterial({ color: 0x3366ff }),
-            primitiveFrame: new THREE.LineBasicMaterial({ color: 0xff3333 }), // 红色原胞
-            vertexAtom: new THREE.MeshLambertMaterial({ color: 0x222222 }), // 深灰
-            centerAtom: new THREE.MeshLambertMaterial({ color: 0x993399 }), // 紫色
-            faceAtom: new THREE.MeshLambertMaterial({ color: 0x444444 }),   // 中灰
-            // BCC扩展晶胞材质 (浅蓝色半透明)
+            primitiveFrame: new THREE.LineBasicMaterial({ color: 0xff3333 }),
+            vertexAtom: new THREE.MeshLambertMaterial({ color: 0x222222 }),
+            centerAtom: new THREE.MeshLambertMaterial({ color: 0x993399 }),
+            faceAtom: new THREE.MeshLambertMaterial({ color: 0x444444 }),
             bccExtendFrame: new THREE.LineBasicMaterial({ color: 0x33ccff, transparent: true, opacity: 0.7 }),
             bccExtendAtom: new THREE.MeshLambertMaterial({ color: 0x222222, transparent: true, opacity: 0.7 }),
             bccExtendCenterAtom: new THREE.MeshLambertMaterial({ color: 0x993399, transparent: true, opacity: 0.7 }),
-            // 堆积模式的基础颜色将在每个原子独立材质中定义
         };
 
         const atomGeometry = new THREE.SphereGeometry(0.08, 24, 24);
-        const centerAtomGeometry = new THREE.SphereGeometry(0.1, 24, 24); // 中心原子稍大
+        const centerAtomGeometry = new THREE.SphereGeometry(0.1, 24, 24);
         
-        // ========== 3. 晶格定义 (修正BCC扩展晶胞位置) ==========
+        // ========== 3. 晶格定义 ==========
         const latticeDefinitions = {
             'simple-cubic': {
                 name: '简单立方 (P)',
@@ -220,7 +313,6 @@
                 bodyCenter: [],
                 faceCenters: [],
                 baseCenters: []
-                // 简单立方的原胞就是晶胞本身，不额外定义红色原胞（避免重叠）
             },
             'body-centered-cubic': {
                 name: '体心立方 (I)',
@@ -230,39 +322,28 @@
                 bodyCenter: [[1,1,1]],
                 faceCenters: [],
                 baseCenters: [],
-                // 原胞顶点 (基于基矢 a1 = (-1,1,1), a2 = (1,-1,1), a3 = (1,1,-1) 从原点出发)
                 primitiveVerts: [
-                    [0,0,0],     // 0
-                    [-1,1,1],    // 1 = a1 (延伸到左+上+前) - 无原子，作为扩展晶胞1的体心
-                    [1,-1,1],    // 2 = a2 (延伸到右+下+前) - 无原子，作为扩展晶胞2的体心
-                    [1,1,-1],    // 3 = a3 (延伸到右+上+后) - 无原子，作为扩展晶胞3的体心
-                    [0,0,2],     // 4 = a1+a2
-                    [0,2,0],     // 5 = a1+a3
-                    [2,0,0],     // 6 = a2+a3
-                    [1,1,1]      // 7 = a1+a2+a3 (体心)
+                    [0,0,0], [-1,1,1], [1,-1,1], [1,1,-1],
+                    [0,0,2], [0,2,0], [2,0,0], [1,1,1]
                 ],
-                // BCC扩展晶胞定义 (修正：3个扩展晶胞的体心对应原胞的3个外部顶点)
                 extendCells: [
-                    // 晶胞1: 体心 = 原胞顶点1 (-1,1,1)
                     {
                         size: [2,2,2],
-                        position: [-1,1,1], // 晶胞中心 = 原胞顶点1
+                        position: [-1,1,1],
                         vertices: [[-2,0,0], [0,0,0], [-2,2,0], [-2,0,2], [0,2,0], [0,0,2], [-2,2,2], [0,2,2]],
-                        bodyCenter: [[-1,1,1]] // 体心就是原胞顶点1
+                        bodyCenter: [[-1,1,1]]
                     },
-                    // 晶胞2: 体心 = 原胞顶点2 (1,-1,1)
                     {
                         size: [2,2,2],
-                        position: [1,-1,1], // 晶胞中心 = 原胞顶点2
+                        position: [1,-1,1],
                         vertices: [[0,-2,0], [2,-2,0], [0,0,0], [0,-2,2], [2,0,0], [2,-2,2], [0,0,2], [2,0,2]],
-                        bodyCenter: [[1,-1,1]] // 体心就是原胞顶点2
+                        bodyCenter: [[1,-1,1]]
                     },
-                    // 晶胞3: 体心 = 原胞顶点3 (1,1,-1)
                     {
                         size: [2,2,2],
-                        position: [1,1,-1], // 晶胞中心 = 原胞顶点3
+                        position: [1,1,-1],
                         vertices: [[0,0,-2], [2,0,-2], [0,2,-2], [0,0,0], [2,2,-2], [2,0,0], [0,2,0], [2,2,0]],
-                        bodyCenter: [[1,1,-1]] // 体心就是原胞顶点3
+                        bodyCenter: [[1,1,-1]]
                     }
                 ]
             },
@@ -274,112 +355,56 @@
                 bodyCenter: [],
                 faceCenters: [[1,1,0],[1,1,2],[1,0,1],[1,2,1],[0,1,1],[2,1,1]],
                 baseCenters: [],
-                // 原胞顶点 (基于基矢 a1 = (0,1,1), a2 = (1,0,1), a3 = (1,1,0) 从原点出发)
                 primitiveVerts: [
-                    [0,0,0],     // 0
-                    [0,1,1],     // 1 = a1
-                    [1,0,1],     // 2 = a2
-                    [1,1,0],     // 3 = a3
-                    [1,1,2],     // 4 = a1+a2
-                    [1,2,1],     // 5 = a1+a3
-                    [2,1,1],     // 6 = a2+a3
-                    [2,2,2]      // 7 = a1+a2+a3 (顶点)
+                    [0,0,0], [0,1,1], [1,0,1], [1,1,0],
+                    [1,1,2], [1,2,1], [2,1,1], [2,2,2]
                 ]
             }
         };
 
         // ========== 4. 场景对象管理 ==========
-        // 标准模式对象
-        const standardObjects = {
-            frame: null,
-            primitiveFrame: null,  // 原胞线框
-            atoms: [],             // 所有标准原子
-            bccExtendFrames: [],    // BCC扩展晶胞框架
-            bccExtendAtoms: []      // BCC扩展晶胞原子
-        };
-        
-        // 堆积模式对象 (只有原子球，每个原子独立材质)
-        const packingObjects = {
-            atoms: []      // 大球 (每个球有自己的材质)
-        };
+        const standardObjects = { frame: null, primitiveFrame: null, atoms: [], bccExtendFrames: [], bccExtendAtoms: [] };
+        const packingObjects = { atoms: [] };
 
         let currentLattice = 'simple-cubic';
-        let currentMode = 'standard'; // 'standard' 或 'packing'
-        let atomsVisible = true;       // 原子可见性状态
-        let showBCCExtend = true;      // BCC扩展晶胞显示状态
+        let currentMode = 'standard';
+        let atomsVisible = true;
+        let showBCCExtend = true;
 
-        // 辅助函数：清除标准模式对象
+        // 辅助函数 (与原来一致)
         function clearStandard() {
-            // 清除主晶胞
-            if (standardObjects.frame) {
-                scene.remove(standardObjects.frame);
-                standardObjects.frame.geometry.dispose();
-                standardObjects.frame = null;
-            }
-            if (standardObjects.primitiveFrame) {
-                scene.remove(standardObjects.primitiveFrame);
-                standardObjects.primitiveFrame.geometry.dispose();
-                standardObjects.primitiveFrame = null;
-            }
-            // 清除主晶胞原子
-            standardObjects.atoms.forEach(atom => {
-                scene.remove(atom);
-                atom.geometry.dispose();
-            });
+            if (standardObjects.frame) { scene.remove(standardObjects.frame); standardObjects.frame.geometry.dispose(); standardObjects.frame = null; }
+            if (standardObjects.primitiveFrame) { scene.remove(standardObjects.primitiveFrame); standardObjects.primitiveFrame.geometry.dispose(); standardObjects.primitiveFrame = null; }
+            standardObjects.atoms.forEach(atom => { scene.remove(atom); atom.geometry.dispose(); });
             standardObjects.atoms = [];
-            
-            // 清除BCC扩展晶胞
-            standardObjects.bccExtendFrames.forEach(frame => {
-                scene.remove(frame);
-                frame.geometry.dispose();
-            });
+            standardObjects.bccExtendFrames.forEach(frame => { scene.remove(frame); frame.geometry.dispose(); });
             standardObjects.bccExtendFrames = [];
-            
-            standardObjects.bccExtendAtoms.forEach(atom => {
-                scene.remove(atom);
-                atom.geometry.dispose();
-            });
+            standardObjects.bccExtendAtoms.forEach(atom => { scene.remove(atom); atom.geometry.dispose(); });
             standardObjects.bccExtendAtoms = [];
         }
 
-        // 清除堆积模式对象 (只有原子)
         function clearPacking() {
-            packingObjects.atoms.forEach(atom => {
-                scene.remove(atom);
-                atom.geometry.dispose();
-            });
+            packingObjects.atoms.forEach(atom => { scene.remove(atom); atom.geometry.dispose(); });
             packingObjects.atoms = [];
         }
 
-        // ========== 构建BCC扩展晶胞 (修正版) ==========
+        // 构建BCC扩展晶胞
         function buildBCCNeighbors(def) {
-            // 清除原有扩展晶胞
-            standardObjects.bccExtendFrames.forEach(frame => {
-                scene.remove(frame);
-                frame.geometry.dispose();
-            });
+            standardObjects.bccExtendFrames.forEach(frame => { scene.remove(frame); frame.geometry.dispose(); });
             standardObjects.bccExtendFrames = [];
-            
-            standardObjects.bccExtendAtoms.forEach(atom => {
-                scene.remove(atom);
-                atom.geometry.dispose();
-            });
+            standardObjects.bccExtendAtoms.forEach(atom => { scene.remove(atom); atom.geometry.dispose(); });
             standardObjects.bccExtendAtoms = [];
 
-            // 如果不是BCC或不显示扩展，直接返回
             if (currentLattice !== 'body-centered-cubic' || !showBCCExtend) return;
 
-            // 遍历3个扩展晶胞 (体心对应原胞的3个外部顶点)
             def.extendCells.forEach(cell => {
-                // 创建扩展晶胞框架 (浅蓝色半透明)
                 const boxGeo = new THREE.BoxGeometry(...cell.size);
                 const edges = new THREE.EdgesGeometry(boxGeo);
                 const frame = new THREE.LineSegments(edges, materials.bccExtendFrame);
-                frame.position.set(...cell.position); // 晶胞中心 = 原胞外部顶点
+                frame.position.set(...cell.position);
                 scene.add(frame);
                 standardObjects.bccExtendFrames.push(frame);
                 
-                // 创建扩展晶胞顶点原子 (半透明深灰)
                 cell.vertices.forEach(pos => {
                     const atom = new THREE.Mesh(atomGeometry, materials.bccExtendAtom);
                     atom.position.set(...pos);
@@ -387,7 +412,6 @@
                     standardObjects.bccExtendAtoms.push(atom);
                 });
                 
-                // 创建扩展晶胞体心原子 (半透明紫色) - 正好是原胞的外部顶点
                 cell.bodyCenter.forEach(pos => {
                     const atom = new THREE.Mesh(centerAtomGeometry, materials.bccExtendCenterAtom);
                     atom.position.set(...pos);
@@ -396,17 +420,13 @@
                 });
             });
 
-            // 设置扩展晶胞原子可见性
-            standardObjects.bccExtendAtoms.forEach(atom => {
-                atom.visible = atomsVisible;
-            });
+            standardObjects.bccExtendAtoms.forEach(atom => { atom.visible = atomsVisible; });
         }
 
-        // ========== 5. 标准模式构建 (修改版) ==========
+        // 构建标准模式
         function buildStandard(def) {
             clearStandard();
             
-            // 创建主晶胞框架 (蓝色)
             const boxGeo = new THREE.BoxGeometry(...def.size);
             const edges = new THREE.EdgesGeometry(boxGeo);
             const frame = new THREE.LineSegments(edges, materials.frame);
@@ -414,73 +434,50 @@
             scene.add(frame);
             standardObjects.frame = frame;
             
-            // 创建主晶胞原子 (小球)
             const allAtoms = [];
-            
-            // 顶点原子
             def.vertices.forEach(pos => {
                 const atom = new THREE.Mesh(atomGeometry, materials.vertexAtom);
                 atom.position.set(...pos);
                 scene.add(atom);
                 allAtoms.push(atom);
             });
-            
-            // 体心原子
             def.bodyCenter.forEach(pos => {
                 const atom = new THREE.Mesh(centerAtomGeometry, materials.centerAtom);
                 atom.position.set(...pos);
                 scene.add(atom);
                 allAtoms.push(atom);
             });
-            
-            // 面心原子
             def.faceCenters.forEach(pos => {
                 const atom = new THREE.Mesh(atomGeometry, materials.faceAtom);
                 atom.position.set(...pos);
                 scene.add(atom);
                 allAtoms.push(atom);
             });
-            
             standardObjects.atoms = allAtoms;
             
-            // 根据复选框状态决定是否绘制原胞 (红色)
             const showPrimitive = document.getElementById('showPrimitiveCheck').checked;
             if (showPrimitive && def.primitiveVerts) {
-                // 构建原胞线框 (基于8个顶点和标准立方体边连接)
                 const verts = def.primitiveVerts;
-                // 边的索引: 12条边, 对应立方体的边
-                const edgeIndices = [
-                    [0,1], [0,2], [0,3],
-                    [1,4], [1,5],
-                    [2,4], [2,6],
-                    [3,5], [3,6],
-                    [4,7], [5,7], [6,7]
-                ];
-                
+                const edgeIndices = [[0,1],[0,2],[0,3],[1,4],[1,5],[2,4],[2,6],[3,5],[3,6],[4,7],[5,7],[6,7]];
                 const points = [];
                 edgeIndices.forEach(pair => {
                     points.push(new THREE.Vector3(...verts[pair[0]]));
                     points.push(new THREE.Vector3(...verts[pair[1]]));
                 });
-                
                 const primGeo = new THREE.BufferGeometry().setFromPoints(points);
                 const primFrame = new THREE.LineSegments(primGeo, materials.primitiveFrame);
                 scene.add(primFrame);
                 standardObjects.primitiveFrame = primFrame;
             }
             
-            // 构建BCC扩展晶胞 (修正版)
             buildBCCNeighbors(def);
-            
-            // 设置主晶胞原子可见性
             standardObjects.atoms.forEach(atom => atom.visible = atomsVisible);
         }
 
-        // ========== 6. 堆积模式构建 (原子球相切，每个原子独立材质) ==========
+        // 构建堆积模式
         function buildPacking(def) {
             clearPacking();
             
-            // 收集所有原子位置
             const positions = [
                 ...def.vertices,
                 ...def.bodyCenter,
@@ -490,7 +487,6 @@
             
             if (positions.length === 0) return;
             
-            // 计算最近邻距离
             let minDist = Infinity;
             for (let i = 0; i < positions.length; i++) {
                 for (let j = i+1; j < positions.length; j++) {
@@ -504,11 +500,9 @@
             
             if (!isFinite(minDist)) minDist = 1.0;
             
-            // 原子相切：半径 = 最近邻距离的一半
             const atomRadius = minDist * 0.5;
             const packingAtomGeo = new THREE.SphereGeometry(atomRadius, 32, 32);
             
-            // 每个原子独立材质 (初始橙色)
             positions.forEach(pos => {
                 const material = new THREE.MeshLambertMaterial({ color: 0xff9933 });
                 const atom = new THREE.Mesh(packingAtomGeo, material);
@@ -521,40 +515,25 @@
             updateResetButtonState();
         }
 
-        // 更新重置按钮状态
         function updateResetButtonState() {
             const resetBtn = document.getElementById('resetColorsBtn');
-            if (resetBtn) {
-                resetBtn.disabled = (currentMode !== 'packing');
-            }
+            if (resetBtn) resetBtn.disabled = (currentMode !== 'packing');
         }
 
-        // ========== 7. 加载晶格 (根据当前模式) ==========
         function loadLattice(type) {
             currentLattice = type;
             const def = latticeDefinitions[type];
+            clearStandard(); clearPacking();
+            if (currentMode === 'standard') buildStandard(def);
+            else buildPacking(def);
             
-            clearStandard();
-            clearPacking();
-            
-            if (currentMode === 'standard') {
-                buildStandard(def);
-            } else {
-                buildPacking(def);
-            }
-            
-            // 更新按钮激活状态
             document.querySelectorAll('.lattice-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.type === type);
             });
-            
-            console.log(`✅ 加载 ${def.name} | 模式: ${currentMode}`);
         }
 
-        // ========== 8. 切换显示模式 ==========
         function toggleMode() {
             const def = latticeDefinitions[currentLattice];
-            
             if (currentMode === 'standard') {
                 clearStandard();
                 buildPacking(def);
@@ -568,19 +547,14 @@
                 document.getElementById('toggleModeBtn').textContent = '切换到 堆积模式';
                 document.getElementById('toggleModeBtn').classList.remove('packing-mode');
             }
-            
             updateVisibility();
             updateResetButtonState();
         }
 
-        // ========== 9. 原子可见性切换 (修改版) ==========
         function updateVisibility() {
             if (currentMode === 'standard') {
-                // 主晶胞原子
                 standardObjects.atoms.forEach(atom => atom.visible = atomsVisible);
-                // BCC扩展晶胞原子
                 standardObjects.bccExtendAtoms.forEach(atom => atom.visible = atomsVisible);
-                // 框架和原胞保持可见 (不受原子隐藏影响)
             } else {
                 packingObjects.atoms.forEach(atom => atom.visible = atomsVisible);
             }
@@ -589,42 +563,31 @@
         function toggleAtomsVisibility() {
             atomsVisible = !atomsVisible;
             updateVisibility();
-            
-            const btn = document.getElementById('toggleAtomsBtn');
-            btn.textContent = atomsVisible ? '隐藏原子' : '显示原子';
+            document.getElementById('toggleAtomsBtn').textContent = atomsVisible ? '隐藏原子' : '显示原子';
         }
 
-        // ========== 10. 原子点击高亮 (仅堆积模式) ==========
+        // 原子点击高亮
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
         function onClick(event) {
             if (currentMode !== 'packing') return;
-            
             const rect = renderer.domElement.getBoundingClientRect();
             mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
             mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-            
             raycaster.setFromCamera(mouse, camera);
-            
             const intersects = raycaster.intersectObjects(packingObjects.atoms);
-            
             if (intersects.length > 0) {
-                const hitAtom = intersects[0].object;
-                hitAtom.material.color.setHex(0xff3333); // 红色
+                intersects[0].object.material.color.setHex(0xff3333);
             }
         }
 
-        // ========== 11. 重置颜色 ==========
         function resetColors() {
-            packingObjects.atoms.forEach(atom => {
-                atom.material.color.setHex(0xff9933); // 橙色
-            });
+            packingObjects.atoms.forEach(atom => atom.material.color.setHex(0xff9933));
         }
 
-        // ========== 12. 复选框事件 (修改版) ==========
+        // 复选框事件
         function onPrimitiveCheckChange() {
-            // 只有在标准模式下才需要刷新原胞
             if (currentMode === 'standard') {
                 const def = latticeDefinitions[currentLattice];
                 clearStandard();
@@ -632,50 +595,90 @@
             }
         }
 
-        // ========== BCC扩展晶胞复选框事件 ==========
         function onBCCExtendCheckChange() {
             showBCCExtend = document.getElementById('showBCCExtendCheck').checked;
             if (currentMode === 'standard' && currentLattice === 'body-centered-cubic') {
                 const def = latticeDefinitions[currentLattice];
-                buildBCCNeighbors(def); // 重新构建扩展晶胞
+                buildBCCNeighbors(def);
             }
         }
 
-        // ========== 13. 初始化与事件绑定 ==========
+        // ========== 新增: 面板折叠功能 (移动端自动折叠) ==========
+        function initCollapsiblePanels() {
+            const panels = [document.getElementById('infoPanel'), document.getElementById('latticeSelector')];
+            
+            // 为每个面板设置点击事件
+            panels.forEach(panel => {
+                if (!panel) return;
+                const header = panel.querySelector('.panel-header');
+                const icon = panel.querySelector('.collapse-icon');
+                
+                header.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    panel.classList.toggle('collapsed');
+                    // 更新图标
+                    if (icon) {
+                        icon.textContent = panel.classList.contains('collapsed') ? '▶' : '▼';
+                    }
+                });
+            });
+            
+            // 根据屏幕宽度自动折叠/展开 (移动端自动折叠)
+            function applyResponsiveCollapse() {
+                const isMobile = window.innerWidth < 768;
+                panels.forEach(panel => {
+                    if (!panel) return;
+                    const icon = panel.querySelector('.collapse-icon');
+                    if (isMobile) {
+                        // 移动端: 添加折叠类 (自动收起)
+                        panel.classList.add('collapsed');
+                        if (icon) icon.textContent = '▶';
+                    } else {
+                        // PC端: 确保展开 (移除折叠)
+                        panel.classList.remove('collapsed');
+                        if (icon) icon.textContent = '▼';
+                    }
+                });
+            }
+            
+            // 初始调用
+            applyResponsiveCollapse();
+            
+            // 监听窗口大小变化，调整折叠状态 (防抖)
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    applyResponsiveCollapse();
+                }, 150);
+            });
+        }
+
+        // ========== 初始化 ==========
         loadLattice('simple-cubic');
         
+        // 事件绑定
         document.querySelectorAll('.lattice-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                loadLattice(btn.dataset.type);
-            });
+            btn.addEventListener('click', () => loadLattice(btn.dataset.type));
         });
-        
         document.getElementById('toggleModeBtn').addEventListener('click', toggleMode);
-        
         document.getElementById('resetColorsBtn').addEventListener('click', resetColors);
-        
         document.getElementById('resetViewBtn').addEventListener('click', () => {
             camera.position.set(4, 4, 6);
             camera.lookAt(0, 0, 0);
             controls.target.set(0, 0, 0);
             controls.reset();
         });
-        
         document.getElementById('toggleAtomsBtn').addEventListener('click', toggleAtomsVisibility);
-        
         document.getElementById('showPrimitiveCheck').addEventListener('change', onPrimitiveCheckChange);
-        
-        // 绑定BCC扩展晶胞开关事件
         document.getElementById('showBCCExtendCheck').addEventListener('change', onBCCExtendCheckChange);
-
         renderer.domElement.addEventListener('click', onClick);
 
-        // ========== 14. 光源与动画 ==========
+        // 光源
         scene.add(new THREE.AmbientLight(0xffffff, 0.7));
         const pointLight = new THREE.PointLight(0xffffff, 0.8);
         pointLight.position.set(5, 5, 7);
         scene.add(pointLight);
-        
         const backLight = new THREE.PointLight(0xffffff, 0.4);
         backLight.position.set(-3, -2, -4);
         scene.add(backLight);
@@ -694,6 +697,9 @@
         animate();
 
         updateResetButtonState();
+        
+        // 启动折叠面板功能 (放在最后确保DOM已加载)
+        initCollapsiblePanels();
     </script>
 </body>
 </html>
