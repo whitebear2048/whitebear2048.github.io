@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D晶向族 · 半透明背景原子 (突出显示方向原子)</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f7; color: #222; }
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 28px;
+            border-radius: 8px;
+            border-left: 5px solid #0066cc;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            pointer-events: none;
+            backdrop-filter: blur(5px);
+            z-index: 10;
+            line-height: 1.6;
+            color: #222;
+        }
+        #info h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.3rem;
+            color: #0066cc;
+            font-weight: 500;
+            letter-spacing: 1px;
+        }
+        #info p {
+            margin: 8px 0;
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #000;
+        }
+        #info #count {
+            font-size: 1.3rem;
+            color: #0066cc;
+        }
+        #info .sub {
+            font-size: 1.0rem;
+            color: #444;
+            font-weight: 300;
+        }
+        #status {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.8);
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            color: #333;
+            border: 1px solid #ccc;
+            z-index: 10;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .instruction {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.8);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #333;
+            border: 1px solid #ccc;
+            z-index: 10;
+            pointer-events: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>📌 当前晶向指数</h2>
+        <p id="current-index">——</p>
+        <div class="sub">等效晶向总数 <span id="count" style="font-size:1.5rem; font-weight:bold; color:#0066cc;">0</span></div>
+        <div class="sub" style="margin-top:8px;">点击原子 → 对称族 &lt;uvw&gt; 粗虚线，其余原子半透明</div>
+    </div>
+    <div id="status">⚛️ 原点 O (绿色) | 选中原子橙色 | 虚线上的原子保持不透明</div>
+    <div class="instruction">🖱️👆 点击或触摸原子 | 拖动旋转/缩放 | 点空白处恢复</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化场景、相机、渲染器 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf5f5f7);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(5, 3, 5);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // --- 控制器 ---
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 1.2;
+        controls.enablePan = true;
+        controls.maxDistance = 15;
+        controls.minDistance = 2;
+        controls.target.set(0, 0, 0);
+
+        // --- 灯光 ---
+        const ambientLight = new THREE.AmbientLight(0x404060);
+        scene.add(ambientLight);
+        const light1 = new THREE.DirectionalLight(0xffffff, 1.0);
+        light1.position.set(2, 5, 3);
+        scene.add(light1);
+        const light2 = new THREE.DirectionalLight(0xffccaa, 0.6);
+        light2.position.set(-3, 2, -2);
+        scene.add(light2);
+        const pointLight = new THREE.PointLight(0x4466ff, 0.5, 10);
+        pointLight.position.set(1, 2, 2);
+        scene.add(pointLight);
+
+        // 辅助网格和坐标轴
+        const gridHelper = new THREE.GridHelper(6, 20, 0x3366aa, 0x99aacc);
+        gridHelper.position.y = -0.01;
+        scene.add(gridHelper);
+        const axesHelper = new THREE.AxesHelper(3);
+        scene.add(axesHelper);
+
+        // 背景星星（淡灰色）
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsCount = 1000;
+        const starPositions = new Float32Array(starsCount * 3);
+        for (let i = 0; i < starsCount; i++) {
+            starPositions[i*3] = (Math.random() - 0.5) * 200;
+            starPositions[i*3+1] = (Math.random() - 0.5) * 200;
+            starPositions[i*3+2] = (Math.random() - 0.5) * 200;
+        }
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starsMaterial = new THREE.PointsMaterial({color: 0xcccccc, size: 0.15});
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+
+        // --- 原子存储 ---
+        const atoms = [];
+        let overlayGroup = new THREE.Group();
+        scene.add(overlayGroup);
+
+        // --- 记录上一次选中的原子 ---
+        let lastSelectedAtom = null;
+
+        // --- 生成 3x3x3 点阵 ---
+        const sphereRadius = 0.18;
+        const originColor = 0x22aa66;   // 原点绿色
+        const atomColor = 0x3377bb;      // 普通原子蓝色
+        const highlightColor = 0xff9900; // 高亮橙色
+
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                for (let k = -1; k <= 1; k++) {
+                    const geometry = new THREE.SphereGeometry(sphereRadius, 32, 16);
+                    let material;
+                    if (i === 0 && j === 0 && k === 0) {
+                        material = new THREE.MeshStandardMaterial({ color: originColor, emissive: 0x113311, roughness: 0.2, metalness: 0.1 });
+                    } else {
+                        material = new THREE.MeshStandardMaterial({ color: atomColor, emissive: 0x112233, roughness: 0.3, metalness: 0.1 });
+                    }
+                    const sphere = new THREE.Mesh(geometry, material);
+                    sphere.position.set(i, j, k);
+                    
+                    // 保存原始颜色以便恢复
+                    sphere.userData = { 
+                        type: 'atom', 
+                        coord: [i, j, k],
+                        originalColor: material.color.clone()
+                    };
+                    
+                    scene.add(sphere);
+                    atoms.push(sphere);
+                }
+            }
+        }
+
+        // --- 工具函数：生成对称晶向族 ---
+        function generateSymmetryDirections(coord) {
+            const [x, y, z] = coord;
+            if (x === 0 && y === 0 && z === 0) return [];
+
+            const absComp = [Math.abs(x), Math.abs(y), Math.abs(z)];
+            const permutations = [
+                [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]
+            ];
+            
+            const dirSet = new Set();
+            
+            permutations.forEach(perm => {
+                const base = [absComp[perm[0]], absComp[perm[1]], absComp[perm[2]]];
+                for (let sgn1 = -1; sgn1 <= 1; sgn1 += 2) {
+                    for (let sgn2 = -1; sgn2 <= 1; sgn2 += 2) {
+                        for (let sgn3 = -1; sgn3 <= 1; sgn3 += 2) {
+                            const vec = [
+                                base[0] * sgn1,
+                                base[1] * sgn2,
+                                base[2] * sgn3
+                            ];
+                            const key = vec.join(',');
+                            dirSet.add(key);
+                        }
+                    }
+                }
+            });
+
+            const result = [];
+            dirSet.forEach(key => {
+                const parts = key.split(',').map(Number);
+                if (parts[0] === 0 && parts[1] === 0 && parts[2] === 0) return;
+                result.push({
+                    vec: new THREE.Vector3(parts[0], parts[1], parts[2]),
+                    index: parts
+                });
+            });
+            
+            return result;
+        }
+
+        // --- 创建粗虚线（使用圆柱体）---
+        function createDashedCylinders(dir, length, radius = 0.08, dashLen = 0.25, gapLen = 0.15) {
+            const group = new THREE.Group();
+            const direction = dir.clone().normalize();
+            const total = length;
+            let current = 0.2; // 从离原点稍远处开始，避免与原子球重叠
+            while (current < total) {
+                const start = current;
+                const end = Math.min(current + dashLen, total);
+                const segmentLength = end - start;
+                if (segmentLength <= 0.01) break;
+
+                // 圆柱几何：高度为segmentLength，半径为radius
+                const cylinderGeo = new THREE.CylinderGeometry(radius, radius, segmentLength, 8);
+                const cylinderMat = new THREE.MeshStandardMaterial({ color: 0xff3300 });
+                const cylinder = new THREE.Mesh(cylinderGeo, cylinderMat);
+                
+                // 计算中点位置
+                const mid = start + segmentLength / 2;
+                const pos = direction.clone().multiplyScalar(mid);
+                cylinder.position.copy(pos);
+                
+                // 旋转使圆柱Y轴指向方向向量
+                const quaternion = new THREE.Quaternion().setFromUnitVectors(
+                    new THREE.Vector3(0, 1, 0),
+                    direction
+                );
+                cylinder.quaternion.copy(quaternion);
+                
+                group.add(cylinder);
+                
+                current = end + gapLen;
+            }
+            return group;
+        }
+
+        // --- 重置所有原子为不透明 (并关闭透明) ---
+        function resetAllAtomsOpacity() {
+            atoms.forEach(atom => {
+                atom.material.transparent = false;
+                atom.material.opacity = 1.0;
+                // 不改颜色，只改透明度
+            });
+        }
+
+        // --- 清除选择：恢复颜色、不透明度、叠加层、显示文本 ---
+        function clearSelection() {
+            if (lastSelectedAtom) {
+                // 恢复上一次选中的原子颜色
+                const originalColor = lastSelectedAtom.userData.originalColor;
+                lastSelectedAtom.material.color.copy(originalColor);
+                lastSelectedAtom = null;
+            }
+            resetAllAtomsOpacity();
+            // 清除叠加层
+            while(overlayGroup.children.length > 0) {
+                overlayGroup.remove(overlayGroup.children[0]);
+            }
+            document.getElementById('current-index').innerText = '——';
+            document.getElementById('count').innerText = '0';
+        }
+
+        // --- 更新叠加层：箭头、粗虚线、标签，并设置半透明背景原子 ---
+        function updateOverlay(coord, selectedAtom) {
+            // 1. 先重置所有原子为不透明
+            resetAllAtomsOpacity();
+            
+            // 2. 清除旧的叠加层
+            while(overlayGroup.children.length > 0) {
+                overlayGroup.remove(overlayGroup.children[0]);
+            }
+
+            // 3. 处理原点情况
+            if (coord[0] === 0 && coord[1] === 0 && coord[2] === 0) {
+                document.getElementById('current-index').innerText = '原点 (无方向)';
+                document.getElementById('count').innerText = '0';
+                return; // 所有原子已不透明，原点颜色在selectAtom中已处理为绿色
+            }
+
+            // === 修正点：交换第二个和第三个坐标值以正确显示晶向指数 [u, v, w] ===
+            const indexStr = `[${coord[0]}, ${coord[2]}, ${coord[1]}]`; // 修改此处
+            document.getElementById('current-index').innerText = indexStr;
+
+            const symDirs = generateSymmetryDirections(coord);
+            document.getElementById('count').innerText = symDirs.length;
+
+            // 4. 构建需要保持不透明的原子集合 (所有对称方向上的原子 + 原点)
+            const keepSet = new Set();
+            keepSet.add('0,0,0'); // 原点始终保留不透明
+            symDirs.forEach(item => {
+                const key = `${item.vec.x},${item.vec.y},${item.vec.z}`;
+                keepSet.add(key);
+            });
+
+            // 5. 遍历所有原子，不在keepSet中的设为半透明
+            atoms.forEach(atom => {
+                const atomCoord = atom.userData.coord;
+                const key = `${atomCoord[0]},${atomCoord[1]},${atomCoord[2]}`;
+                if (!keepSet.has(key)) {
+                    atom.material.transparent = true;
+                    atom.material.opacity = 0.28; // 半透明，方便观察方向原子
+                } else {
+                    atom.material.transparent = false;
+                    atom.material.opacity = 1.0;
+                }
+            });
+
+            // 6. 绘制叠加层 (箭头、虚线、标签)
+            const targetPos = new THREE.Vector3(coord[0], coord[1], coord[2]);
+            const dirVec = targetPos.clone().normalize();
+            const arrowLength = targetPos.length();
+            
+            const arrowHelper = new THREE.ArrowHelper(dirVec, new THREE.Vector3(0, 0, 0), arrowLength, 0xcc3300, 0.25, 0.15);
+            overlayGroup.add(arrowHelper);
+
+            // 末端小球
+            const tipSphereGeo = new THREE.SphereGeometry(0.08, 16);
+            const tipSphereMat = new THREE.MeshStandardMaterial({ color: 0xcc6600 });
+            const tipSphere = new THREE.Mesh(tipSphereGeo, tipSphereMat);
+            tipSphere.position.copy(targetPos);
+            overlayGroup.add(tipSphere);
+
+            // 当前指数标签
+            const currentLabelDiv = document.createElement('div');
+            currentLabelDiv.textContent = indexStr;
+            currentLabelDiv.style.color = '#000';
+            currentLabelDiv.style.fontSize = '28px';
+            currentLabelDiv.style.fontWeight = 'bold';
+            currentLabelDiv.style.background = 'rgba(255,255,255,0.9)';
+            currentLabelDiv.style.padding = '6px 14px';
+            currentLabelDiv.style.borderRadius = '16px';
+            currentLabelDiv.style.border = '2px solid #0066cc';
+            currentLabelDiv.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+            currentLabelDiv.style.whiteSpace = 'nowrap';
+            
+            const currentLabel = new CSS2DObject(currentLabelDiv);
+            currentLabel.position.copy(targetPos.clone().add(dirVec.clone().multiplyScalar(0.4)));
+            overlayGroup.add(currentLabel);
+
+            // 虚线长度
+            const dashLength = 2.8;
+            const cylinderRadius = 0.03; // 加粗圆柱半径
+            const dashSegment = 0.3;      // 每段虚线长度
+            const gap = 0.05;              // 间隙
+            
+            // 遍历每个对称方向，生成粗虚线
+            symDirs.forEach(item => {
+                const dir = item.vec.clone().normalize();
+                const index = item.index;
+                // === 修正点：交换第二个和第三个坐标值以正确显示对称晶向指数 [u, v, w] ===
+                const indexDisplay = `[${index[0]}, ${index[2]}, ${index[1]}]`; // 修改此处
+                
+                // 生成圆柱虚线组
+                const dashedGroup = createDashedCylinders(dir, dashLength, cylinderRadius, dashSegment, gap);
+                overlayGroup.add(dashedGroup);
+                
+                // 对称方向标签
+                const endPos = dir.clone().multiplyScalar(dashLength);
+                const labelDiv = document.createElement('div');
+                labelDiv.textContent = indexDisplay;
+                labelDiv.style.color = '#000';
+                labelDiv.style.fontSize = '22px';
+                labelDiv.style.fontWeight = '500';
+                labelDiv.style.background = 'rgba(255,255,255,0.9)';
+                labelDiv.style.padding = '4px 12px';
+                labelDiv.style.borderRadius = '14px';
+                labelDiv.style.border = '1px solid #2255aa';
+                labelDiv.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+                labelDiv.style.whiteSpace = 'nowrap';
+                labelDiv.style.pointerEvents = 'none';
+                
+                const label = new CSS2DObject(labelDiv);
+                label.position.copy(endPos.clone().add(dir.clone().multiplyScalar(0.4)));
+                overlayGroup.add(label);
+            });
+        }
+
+        // --- 处理选中原子变色 (保留原点绿色，非原点橙色) ---
+        function selectAtom(atom) {
+            // 恢复上一次选中的原子颜色
+            if (lastSelectedAtom) {
+                const originalColor = lastSelectedAtom.userData.originalColor;
+                lastSelectedAtom.material.color.copy(originalColor);
+            }
+            
+            // 高亮当前原子（原点保持原始颜色）
+            if (atom) {
+                const coord = atom.userData.coord;
+                if (coord[0] === 0 && coord[1] === 0 && coord[2] === 0) {
+                    // 原点：确保颜色为原始绿色
+                    atom.material.color.copy(atom.userData.originalColor);
+                } else {
+                    atom.material.color.setHex(0xff9900); // 橙色高亮
+                }
+                lastSelectedAtom = atom;
+            }
+        }
+
+        // --- 射线检测 (同时处理鼠标和触摸) ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function handleSelection(clientX, clientY) {
+            // 计算归一化设备坐标
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(atoms);
+            
+            if (intersects.length > 0) {
+                const hit = intersects[0].object;
+                const coord = hit.userData.coord;
+                
+                // 变色处理 (保留原点绿色)
+                selectAtom(hit);
+                
+                // 更新虚线、半透明等
+                updateOverlay(coord, hit);
+            } else {
+                // 点击空白区域：清除所有选择和高亮，恢复全不透明
+                clearSelection();
+            }
+        }
+
+        // --- 鼠标点击事件 ---
+        window.addEventListener('click', (event) => {
+            handleSelection(event.clientX, event.clientY);
+        });
+
+        // --- 触摸事件 (支持触摸屏) ---
+        window.addEventListener('touchstart', (event) => {
+            event.preventDefault(); // 防止页面滚动
+            if (event.touches.length > 0) {
+                const touch = event.touches[0];
+                handleSelection(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+
+        // 阻止触摸移动时的页面滚动（可选）
+        window.addEventListener('touchmove', (event) => {
+            event.preventDefault();
+        }, { passive: false });
+
+        // --- 窗口自适应 ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', onWindowResize);
+
+        // --- 动画 ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+        animate();
+
+        console.log('升级版：点击原子后，不在晶向上的原子半透明，方向原子高亮不透明');
+    </script>
+</body>
+</html>
