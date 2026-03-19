@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简立方晶胞 · {100}晶面族</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f8f8f8; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        .info-panel {
+            position: fixed; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 300px;
+            z-index: 100;
+        }
+        .info-panel h4 { color: #333; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .info-panel p { color: #555; font-size: 13px; line-height: 1.5; margin: 5px 0; }
+        .info-panel ul { margin: 5px 0 0 20px; color: #666; font-size: 13px; }
+        .info-panel li { margin: 3px 0; }
+        .button-panel {
+            position: fixed; top: 20px; right: 20px;
+            display: flex; flex-direction: column;
+            gap: 10px; z-index: 200;
+        }
+        .control-btn {
+            padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 14px; border: none; color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            transition: background 0.2s, transform 0.1s;
+            min-width: 150px; text-align: center;
+            font-weight: 500; letter-spacing: 0.3px;
+        }
+        .control-btn:hover { filter: brightness(0.92); transform: scale(1.02); }
+        .control-btn.active { background: #666666 !important; }
+        .btn-100 { background: #e34c26; }      /* 橙红 */
+        .btn-010 { background: #2b7a4b; }     /* 墨绿 */
+        .btn-001 { background: #1e6f9f; }       /* 深蓝 */
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="info-panel">
+        <h4>简立方晶胞 · {100} 晶面族</h4>
+        <p>📐 晶格常数 a = 1 | 坐标轴：X右，Y左，Z上</p>
+        <p>🔘 灰色球：顶点原子 (8个)</p>
+        <p>⚫ 灰色框：晶胞边界 | 浅灰线：棱边</p>
+        <p>🎯 彩色矩形：{100}晶面</p>
+        <p style="margin-top:8px;"><strong>面指数与位置</strong>:</p>
+        <ul>
+            <li><span style="color:#e34c26;">●</span> (100) 面：垂直于X轴 (X=1平面)</li>
+            <li><span style="color:#2b7a4b;">●</span> (010) 面：垂直于Y轴 (Y=1平面)</li>
+            <li><span style="color:#1e6f9f;">●</span> (001) 面：垂直于Z轴 (Z=1平面)</li>
+        </ul>
+        <p>🖱️ 操作：左键旋转 | 滚轮缩放 | 右键平移</p>
+        <p>🔘 右侧按钮单独控制每个晶面</p>
+    </div>
+
+    <div class="button-panel">
+        <button class="control-btn btn-100 active" id="btn100">显示 (100) 晶面</button>
+        <button class="control-btn btn-010 active" id="btn010">显示 (010) 晶面</button>
+        <button class="control-btn btn-001 active" id="btn001">显示 (001) 晶面</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ---------- 1. 初始化场景 ----------
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f8f8);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(4, 2.5, 4);
+        camera.lookAt(1, 1, 1);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.target.set(1, 1, 1);
+
+        scene.add(new THREE.AxesHelper(3.5));
+        scene.add(new THREE.GridHelper(6, 20, 0xcccccc, 0xdddddd));
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(ambientLight);
+        const pointLight1 = new THREE.PointLight(0xffffff, 0.8);
+        pointLight1.position.set(3, 4, 4);
+        scene.add(pointLight1);
+        const pointLight2 = new THREE.PointLight(0xffffff, 0.5);
+        pointLight2.position.set(-2, 2, 3);
+        scene.add(pointLight2);
+
+        // ---------- 2. 简立方晶胞基础结构 (保持不变) ----------
+        const a = 2.0;
+        const userVertices = [
+            [0,0,0], [2,0,0], [0,2,0], [0,0,2],
+            [2,2,0], [2,0,2], [0,2,2], [2,2,2]
+        ];
+        const vertexPositions = userVertices.map(v => [v[0], v[2], v[1]]);
+        const atomGeo = new THREE.SphereGeometry(0.1, 24, 24);
+        const atomMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        vertexPositions.forEach(pos => {
+            const atom = new THREE.Mesh(atomGeo, atomMat);
+            atom.position.set(pos[0], pos[1], pos[2]);
+            scene.add(atom);
+        });
+        const boxGeo = new THREE.BoxGeometry(a, a, a);
+        const edges = new THREE.EdgesGeometry(boxGeo);
+        const boxLines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x707070 }));
+        boxLines.position.set(1, 1, 1);
+        scene.add(boxLines);
+        const edgesPairs = [
+            [[0,0,0], [2,0,0]], [[0,2,0], [2,2,0]], [[0,0,2], [2,0,2]], [[0,2,2], [2,2,2]],
+            [[0,0,0], [0,2,0]], [[2,0,0], [2,2,0]], [[0,0,2], [0,2,2]], [[2,0,2], [2,2,2]],
+            [[0,0,0], [0,0,2]], [[2,0,0], [2,0,2]], [[0,2,0], [0,2,2]], [[2,2,0], [2,2,2]]
+        ];
+        const bondMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa });
+        edgesPairs.forEach(([p1, p2]) => {
+            const tp1 = [p1[0], p1[2], p1[1]];
+            const tp2 = [p2[0], p2[2], p2[1]];
+            const points = [new THREE.Vector3(...tp1), new THREE.Vector3(...tp2)];
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geo, bondMat);
+            scene.add(line);
+        });
+
+        // ---------- 3. 定义 {100} 晶面族 (组合正确版本) ----------
+        // 辅助函数：通过四个点计算平面
+        function computePlaneFromPoints(p1, p2, p3, p4) {
+            const tp1 = new THREE.Vector3(p1[0], p1[2], p1[1]);
+            const tp2 = new THREE.Vector3(p2[0], p2[2], p2[1]);
+            const tp3 = new THREE.Vector3(p3[0], p3[2], p3[1]);
+            const tp4 = new THREE.Vector3(p4[0], p4[2], p4[1]);
+            const center = new THREE.Vector3();
+            center.add(tp1).add(tp2).add(tp3).add(tp4).divideScalar(4);
+            const v1 = new THREE.Vector3().subVectors(tp2, tp1);
+            const v2 = new THREE.Vector3().subVectors(tp3, tp1);
+            const normal = new THREE.Vector3().crossVectors(v1, v2).normalize();
+            const widthVec = new THREE.Vector3().subVectors(tp2, tp1).normalize();
+            const heightVec = new THREE.Vector3().subVectors(tp4, tp1).normalize();
+            return { center, normal, widthVec, heightVec };
+        }
+
+        // 平面定义：
+        // (100)面：采用本次修正的正确位置 (X=2平面)
+        // (010)和(001)面：采用前一版本您确认的正确位置
+        const planeData = [
+            { 
+                idx: '(100)',
+                // 修正后的正确位置：X=2平面
+                points: [[2,0,0], [2,2,0], [2,2,2], [2,0,2]],
+                color: 0xe34c26,
+                btnId: 'btn100'
+            },
+            { 
+                idx: '(010)',
+                // 恢复为前一版本正确的位置：Y=2平面
+                points: [[0,2,0], [0,2,2], [2,2,2], [2,2,0]],
+                color: 0x2b7a4b,
+                btnId: 'btn010'
+            },
+            { 
+                idx: '(001)',
+                // 恢复为前一版本正确的位置：Z=2平面
+                points: [[0,0,2], [0,2,2], [2,2,2], [2,0,2]],
+                color: 0x1e6f9f,
+                btnId: 'btn001'
+            }
+        ];
+
+        const planeMeshes = [];
+        const width = 2.0;
+        const height = 2.0;
+        const planeGeo = new THREE.PlaneGeometry(width, height);
+
+        planeData.forEach(item => {
+            const { center, normal, widthVec, heightVec } = computePlaneFromPoints(...item.points);
+            const material = new THREE.MeshPhongMaterial({
+                color: item.color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.5,
+                emissive: 0x000000,
+                shininess: 20
+            });
+            const planeMesh = new THREE.Mesh(planeGeo, material);
+            planeMesh.position.copy(center);
+            const targetZ = normal;
+            const targetX = widthVec;
+            const targetY = heightVec;
+            const rotMatrix = new THREE.Matrix4();
+            rotMatrix.set(
+                targetX.x, targetY.x, targetZ.x, 0,
+                targetX.y, targetY.y, targetZ.y, 0,
+                targetX.z, targetY.z, targetZ.z, 0,
+                0, 0, 0, 1
+            );
+            const quaternion = new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
+            planeMesh.quaternion.copy(quaternion);
+            planeMesh.visible = false;
+            scene.add(planeMesh);
+            planeMeshes.push({
+                mesh: planeMesh,
+                btnId: item.btnId,
+                idx: item.idx
+            });
+        });
+
+        // ---------- 4. 绑定按钮事件 ----------
+        planeMeshes.forEach(item => {
+            const btn = document.getElementById(item.btnId);
+            if (!btn) return;
+            let visible = false;
+            btn.addEventListener('click', () => {
+                visible = !visible;
+                item.mesh.visible = visible;
+                if (visible) {
+                    btn.textContent = `隐藏 ${item.idx} 晶面`;
+                    btn.classList.remove('active');
+                } else {
+                    btn.textContent = `显示 ${item.idx} 晶面`;
+                    btn.classList.add('active');
+                }
+            });
+        });
+
+        console.log('{100}晶面族组合完成：(100)面为X=2平面，(010)面为Y=2平面，(001)面为Z=2平面。');
+
+        // ---------- 5. 窗口自适应与动画循环 ----------
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
