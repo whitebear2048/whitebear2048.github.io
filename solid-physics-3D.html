@@ -88,6 +88,7 @@
             min-height: 80px;                  /* 统一高度，视觉整齐 */
             word-break: break-word;            /* 处理极长文本（如有） */
             line-height: 1.4;
+            cursor: pointer; /* 为下拉菜单主按钮添加手型光标 */
         }
 
         .vis-button:hover {
@@ -96,6 +97,52 @@
             transform: translateY(-2px);
             border-color: #b0c8dd;
             color: #0a1e2e;
+        }
+
+        /* 下拉菜单容器样式 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            width: 100%; /* 确保在网格中占满单元格宽度 */
+        }
+
+        .dropdown-menu {
+            display: none; /* 默认隐藏 */
+            position: absolute;
+            top: 100%; /* 在主按钮正下方 */
+            left: 0;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(0, 20, 40, 0.15);
+            border: 1px solid #d1dee9;
+            z-index: 1000;
+            overflow: hidden;
+            margin-top: 5px; /* 与主按钮有一点间隔 */
+            padding: 0.5rem 0;
+        }
+
+        /* 鼠标悬停在.dropdown容器上时，显示下拉菜单 */
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+
+        /* 下拉菜单项的样式 */
+        .dropdown-item {
+            display: block;
+            padding: 0.9rem 0.5rem;
+            text-decoration: none;
+            color: #2c3e50;
+            font-size: 1.1rem;
+            font-weight: 450;
+            transition: all 0.15s ease;
+            text-align: center;
+        }
+
+        .dropdown-item:hover {
+            background-color: #e0eaf3;
+            color: #0a1e2e;
+            
         }
 
         /* 底部footer */
@@ -150,6 +197,10 @@
             .button-grid {
                 gap: 1.2rem;
             }
+            .dropdown-item {
+                font-size: 1rem;
+                padding: 0.8rem 1rem;
+            }
         }
     </style>
 </head>
@@ -192,22 +243,35 @@
                     简立方晶向
                 </a>
 
+                <!-- 新按钮：简立方晶面 (带下拉菜单) -->
+                <div class="dropdown">
+                    <a class="vis-button" href="#" onclick="return false;">
+                        简立方晶面
+                    </a>
+                    <div class="dropdown-menu">
+                        <a class="dropdown-item" href="https://whitebear2048.github.io/100-surface.html" target="_blank" rel="noopener">{100}晶面</a>
+                        <a class="dropdown-item" href="https://whitebear2048.github.io/110-surface.html" target="_blank" rel="noopener">{110}晶面</a>
+                        <a class="dropdown-item" href="https://whitebear2048.github.io/111-surface.html" target="_blank" rel="noopener">{111}晶面</a>
+                    </div>
+                </div>
+
                 <!-- 
                     此处为预留添加位 —— 未来新按钮可直接加在下面，保持相同class。
-                    预计第4~10个按钮：
+                    预计第5~10个按钮：
                     <a class="vis-button" href="https://..." target="_blank" rel="noopener">新模块名称</a>
-                    <a class="vis-button" href="https://..." target="_blank" rel="noopener">另一模块</a>
-                    ......
-                -->
+                    <a class="dropdown">...</a> 
+	-->
+	<!-- 或者其他下拉菜单 -->
+              
             </div>
             <!-- 附加提示：注释行对用户不可见，但维护者一看便知 -->
-            <!-- 提示：现在已有3个按钮，最多可继续添加7个，保持网格美观 -->
+            <!-- 提示：现在已有4个主按钮项（其中1个包含下拉菜单），最多可继续添加6个，保持网格美观 -->
         </section>
 
         <!-- 底部信息（固定两行） -->
         <footer>
             <p class="institution">南京信息工程大学 · 集成电路学院</p>
-            <p class="course-term">2025-2026-2 @ 固体物理学课程组</p>
+            <p class="course-term">2025-2026-2 @ 微电子学物理基础课程组</p>
         </footer>
     </div>
 
@@ -216,6 +280,7 @@
          2. 按钮样式统一使用 .vis-button，方便批量修改。
          3. 白色背景保证简洁，微阴影和悬浮效果提升交互感。
          4. 底部信息已按要求准确显示。
+         5. 新增：已将“简立方晶面”的三个子页面整合为一个带悬停下拉菜单的按钮。
     -->
 </body>
 </html>
