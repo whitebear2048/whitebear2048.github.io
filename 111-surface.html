@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简立方晶胞 · {111}晶面族</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f8f8f8; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        .info-panel {
+            position: fixed; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 300px;
+            z-index: 100;
+        }
+        .info-panel h4 { color: #333; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .info-panel p { color: #555; font-size: 13px; line-height: 1.5; margin: 5px 0; }
+        .info-panel ul { margin: 5px 0 0 20px; color: #666; font-size: 13px; }
+        .info-panel li { margin: 3px 0; }
+        .button-panel {
+            position: fixed; top: 20px; right: 20px;
+            display: flex; flex-direction: column;
+            gap: 10px; z-index: 200;
+        }
+        .control-btn {
+            padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 14px; border: none; color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            transition: background 0.2s, transform 0.1s;
+            min-width: 150px; text-align: center;
+            font-weight: 500; letter-spacing: 0.3px;
+        }
+        .control-btn:hover { filter: brightness(0.92); transform: scale(1.02); }
+        .control-btn.active { background: #993399 !important; }
+        .btn-111 { background: #e34c26; }      /* 橙红 */
+        .btn-11-1 { background: #2b7a4b; }     /* 墨绿 */
+        .btn-1-11 { background: #1e6f9f; }     /* 深蓝 */
+        .btn--111 { background: #b34c8c; }     /* 紫罗兰 */
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+
+    <div class="info-panel">
+        <h4>简立方晶胞 · {111} 晶面族 (三角形截面)</h4>
+        <p>📐 晶格常数 a = 1 | 坐标：X右、Y左、Z上</p>
+        <p>🔘 灰色球：顶点原子 (8个)</p>
+        <p>⚫ 灰色框：晶胞边界 | 浅灰线：棱边</p>
+        <p>🔺 彩色半透明三角形：{111}晶面在晶胞内的截面 (经过三个顶点)</p>
+        <p style="margin-top:8px;"><strong>四个等效晶面 (三角形面)</strong>:</p>
+        <ul>
+            <li><span style="color:#e34c26;">●</span> (111) 经过 (1,0,0), (0,1,0), (0,0,1)</li>
+            <!-- 下方列表项已根据您的要求修改 -->
+            <li><span style="color:#2b7a4b;">●</span> (11-1) 经过 (1,0,0), (0,1,0), (1,1,1)</li>
+            <li><span style="color:#1e6f9f;">●</span> (1-11) 经过 (1,1,0), (0,0,0), (0,1,1)</li>
+            <li><span style="color:#b34c8c;">●</span> (-111) 经过 (1,1,0), (1,0,1), (0,0,0)</li>
+        </ul>
+        <p>🖱️ 操作：左键旋转 | 滚轮缩放 | 右键平移</p>
+        <p>🔘 右侧按钮单独控制每个晶面 (初始全部隐藏)</p>
+    </div>
+
+    <div class="button-panel">
+        <button class="control-btn btn-111 active" id="btn111">显示 (111) 面</button>
+        <button class="control-btn btn-11-1 active" id="btn11-1">显示 (11-1) 面</button>
+        <button class="control-btn btn-1-11 active" id="btn1-11">显示 (1-11) 面</button>
+        <button class="control-btn btn--111 active" id="btn-111">显示 (-111) 面</button>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ---------- 1. 初始化场景 ----------
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf8f8f8);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(4, 2.5, 4);  // X=4, Y(上)=2.5, Z(里)=4
+        camera.lookAt(1, 1, 1);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xf8f8f8);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.target.set(1, 1, 1);
+        controls.enableZoom = true;
+        controls.rotateSpeed = 1.0;
+
+        // 辅助元素
+        scene.add(new THREE.AxesHelper(3.5));
+        scene.add(new THREE.GridHelper(6, 20, 0xcccccc, 0xdddddd));
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+        scene.add(ambientLight);
+        const pointLight1 = new THREE.PointLight(0xffffff, 0.8);
+        pointLight1.position.set(3, 4, 4);
+        scene.add(pointLight1);
+        const pointLight2 = new THREE.PointLight(0xffffff, 0.5);
+        pointLight2.position.set(-2, 2, 3);
+        scene.add(pointLight2);
+        scene.fog = new THREE.Fog(0xf8f8f8, 5, 15);
+
+        // ---------- 2. 简立方晶胞基础结构 (坐标: X右, Y上, Z里) ----------
+        const a = 2.0;
+        // 用户坐标 (x向右, y向里, z向上) -> Three.js (x, z, y)
+        const userVertices = [
+            [0,0,0], [2,0,0], [0,2,0], [0,0,2],
+            [2,2,0], [2,0,2], [0,2,2], [2,2,2]
+        ];
+        const vertexPositions = userVertices.map(v => [v[0], v[2], v[1]]);
+
+        // 原子球
+        const atomGeo = new THREE.SphereGeometry(0.1, 24, 24);
+        const atomMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        vertexPositions.forEach(pos => {
+            const atom = new THREE.Mesh(atomGeo, atomMat);
+            atom.position.set(pos[0], pos[1], pos[2]);
+            scene.add(atom);
+        });
+
+        // 晶胞框
+        const boxGeo = new THREE.BoxGeometry(a, a, a);
+        const edges = new THREE.EdgesGeometry(boxGeo);
+        const boxLines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x707070 }));
+        boxLines.position.set(1, 1, 1);
+        scene.add(boxLines);
+
+        // 棱边
+        const bondMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa });
+        const edgesPairs = [
+            [[0,0,0], [2,0,0]], [[0,2,0], [2,2,0]], [[0,0,2], [2,0,2]], [[0,2,2], [2,2,2]],
+            [[0,0,0], [0,2,0]], [[2,0,0], [2,2,0]], [[0,0,2], [0,2,2]], [[2,0,2], [2,2,2]],
+            [[0,0,0], [0,0,2]], [[2,0,0], [2,0,2]], [[0,2,0], [0,2,2]], [[2,2,0], [2,2,2]]
+        ];
+        edgesPairs.forEach(([p1, p2]) => {
+            const tp1 = [p1[0], p1[2], p1[1]];
+            const tp2 = [p2[0], p2[2], p2[1]];
+            const points = [new THREE.Vector3(...tp1), new THREE.Vector3(...tp2)];
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geo, bondMat);
+            scene.add(line);
+        });
+
+        // ---------- 3. 定义 {111} 晶面族 四个三角形面 ----------
+        // 每个面由三个顶点(用户坐标)定义，同时给出法向量(用于材质，但不直接使用)
+        const triangles = [
+            {
+                idx: '(111)',
+                vertices: [[2,0,0], [0,2,0], [0,0,2]], // 用户坐标
+                color: 0xe34c26,
+                btnId: 'btn111'
+            },
+            {
+                idx: '(11-1)',
+                // 已按照您的要求，将此面的顶点修改为 (2,0,0), (0,2,0), (2,2,2)
+                vertices: [[2,0,0], [0,2,0], [2,2,2]],
+                color: 0x2b7a4b,
+                btnId: 'btn11-1'
+            },
+            {
+                idx: '(1-11)',
+                vertices: [[2,2,0], [0,0,0], [0,2,2]],
+                color: 0x1e6f9f,
+                btnId: 'btn1-11'
+            },
+            {
+                idx: '(-111)',
+                vertices: [[2,2,0], [2,0,2], [0,0,0]],
+                color: 0xb34c8c,
+                btnId: 'btn-111'
+            }
+        ];
+
+        // 存储每个面的Mesh
+        const planeMeshes = [];
+
+        triangles.forEach(tri => {
+            // 将顶点从用户坐标转换为Three.js坐标 (x, z, y)
+            const points = tri.vertices.map(v => new THREE.Vector3(v[0], v[2], v[1]));
+            
+            // 创建三角形几何体：一个三角形需要三个顶点
+            const geometry = new THREE.BufferGeometry();
+            const positions = [
+                points[0].x, points[0].y, points[0].z,
+                points[1].x, points[1].y, points[1].z,
+                points[2].x, points[2].y, points[2].z
+            ];
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            // 计算法线以使光照正确
+            geometry.computeVertexNormals();
+            
+            // 材质：双面、半透明
+            const material = new THREE.MeshPhongMaterial({
+                color: tri.color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.45,
+                emissive: 0x000000,
+                shininess: 20
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.visible = false; // 初始隐藏
+            scene.add(mesh);
+
+            planeMeshes.push({
+                mesh: mesh,
+                btnId: tri.btnId,
+                idx: tri.idx
+            });
+        });
+
+        // ---------- 4. 绑定按钮事件 ----------
+        planeMeshes.forEach(item => {
+            const btn = document.getElementById(item.btnId);
+            if (!btn) return;
+            let visible = false; // 初始隐藏
+
+            btn.addEventListener('click', () => {
+                visible = !visible;
+                item.mesh.visible = visible;
+                if (visible) {
+                    btn.textContent = `隐藏 ${item.idx} 面`;
+                    btn.classList.remove('active');
+                } else {
+                    btn.textContent = `显示 ${item.idx} 面`;
+                    btn.classList.add('active');
+                }
+            });
+        });
+
+        console.log('简立方晶胞，{111}三角形截面晶面已加载，初始全部隐藏。');
+
+        // ---------- 5. 窗口自适应 ----------
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // ---------- 6. 动画循环 ----------
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
