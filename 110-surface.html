@@ -2,74 +2,267 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
     <title>简立方晶胞 · {110}晶面族</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f8f8f8; overflow: hidden; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background: #f8f8f8; 
+            overflow: hidden; 
+            touch-action: none; /* 防止触摸时页面滚动，Three.js画布会处理手势 */
+        }
         #canvas-container { width: 100vw; height: 100vh; }
+
+        /* 基础面板样式 (同时适配桌面与移动) */
         .info-panel {
-            position: fixed; top: 20px; left: 20px;
-            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 300px;
-            z-index: 100;
+            position: fixed; 
+            top: 16px; 
+            left: 16px; 
+            background: rgba(255,255,255,0.96); 
+            border-radius: 20px; 
+            box-shadow: 0 6px 24px rgba(0,0,0,0.12); 
+            max-width: 320px; 
+            width: calc(100% - 32px);  /* 手机留边 */
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.5);
+            transition: all 0.25s ease;
+            font-size: 14px;
+            overflow: hidden;
         }
-        .info-panel h4 { color: #333; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .info-panel p { color: #555; font-size: 13px; line-height: 1.5; margin: 5px 0; }
-        .info-panel ul { margin: 5px 0 0 20px; color: #666; font-size: 13px; }
-        .info-panel li { margin: 3px 0; }
-        /* 按钮面板 — 右上角垂直排列 */
+        /* 面板头部 (始终显示) */
+        .info-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: rgba(255,255,255,0.8);
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            user-select: none;
+        }
+        .info-header h4 {
+            font-size: 1rem; 
+            font-weight: 600; 
+            color: #1e1e1e; 
+            margin: 0;
+            letter-spacing: 0.2px;
+        }
+        .info-toggle-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            line-height: 1;
+            color: #444;
+            transition: 0.2s;
+            border: none;
+            outline: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .info-toggle-btn:active { background: #e0e0e0; }
+
+        /* 折叠内容区 */
+        .info-content {
+            padding: 16px 18px 18px 18px;
+            background: white;
+            transition: opacity 0.2s, max-height 0.3s ease;
+            max-height: 600px;   /* 足够大显示全部内容 */
+            opacity: 1;
+            overflow: hidden;
+        }
+        /* 折叠状态 */
+        .info-panel.collapsed .info-content {
+            max-height: 0;
+            opacity: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+            pointer-events: none;
+        }
+        .info-panel.collapsed .info-toggle-btn {
+            transform: rotate(0deg);
+            background: #e6e6e6;
+        }
+        .info-toggle-btn {
+            transform: rotate(0deg);
+        }
+        /* 非折叠时按钮符号为 '−' , 折叠时为 '+'  通过JS控制文本 */
+
+        .info-panel p { color: #444; line-height: 1.5; margin: 8px 0; }
+        .info-panel ul { margin: 8px 0 4px 20px; color: #555; }
+        .info-panel li { margin: 5px 0; display: flex; align-items: center; }
+        .info-panel .color-dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; }
+
+        /* 右侧控制区 (基础样式，移动通过媒体查询改变) */
         .button-panel {
-            position: fixed; top: 20px; right: 20px;
-            display: flex; flex-direction: column;
-            gap: 10px; z-index: 200;
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
         }
-        .control-btn {
-            padding: 10px 20px; border-radius: 8px;
-            cursor: pointer; font-size: 14px; border: none; color: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-            transition: background 0.2s, transform 0.1s;
-            min-width: 150px; text-align: center;
-            font-weight: 500; letter-spacing: 0.3px;
+
+        /* 桌面端样式 (宽度 > 600px) */
+        @media (min-width: 601px) {
+            .button-panel .mobile-toggle {
+                display: none;  /* 隐藏移动端切换checkbox和label */
+            }
+            .button-panel .menu-items {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .control-btn {
+                padding: 10px 20px;
+                border-radius: 40px;
+                font-size: 14px;
+                border: none;
+                color: white;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                min-width: 150px;
+                text-align: center;
+                font-weight: 500;
+                letter-spacing: 0.3px;
+                cursor: pointer;
+                transition: 0.2s;
+                border: 1px solid rgba(255,255,255,0.2);
+            }
         }
-        .control-btn:hover { filter: brightness(0.92); transform: scale(1.02); }
-        .control-btn.active { background: #993399 !important; }
+
+        /* 移动端样式 (宽度 ≤ 600px) */
+        @media (max-width: 600px) {
+            .button-panel {
+                top: 12px;
+                right: 12px;
+            }
+            /* 隐藏直接显示的菜单项，我们通过checkbox控制显示 */
+            .button-panel .menu-items {
+                display: none;
+                position: absolute;
+                top: 60px;
+                right: 0;
+                background: white;
+                border-radius: 24px;
+                box-shadow: 0 12px 28px rgba(0,0,0,0.2);
+                padding: 12px;
+                min-width: 180px;
+                flex-direction: column;
+                gap: 8px;
+                backdrop-filter: blur(8px);
+                background: rgba(255,255,255,0.95);
+                border: 1px solid rgba(255,255,255,0.7);
+            }
+            /* 当checkbox选中时，显示菜单 */
+            #menu-checkbox:checked ~ .menu-items {
+                display: flex;
+            }
+            /* 移动端按钮样式调整 */
+            .control-btn {
+                padding: 12px 16px;
+                border-radius: 40px;
+                font-size: 15px;
+                border: none;
+                color: white;
+                width: 100%;
+                text-align: center;
+                font-weight: 500;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+                transition: 0.2s;
+            }
+            /* 移动端开关按钮 (三条杠) */
+            .mobile-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255,255,255,0.95);
+                backdrop-filter: blur(8px);
+                border-radius: 60px;
+                padding: 8px 18px;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+                border: 1px solid rgba(255,255,255,0.6);
+                cursor: pointer;
+                user-select: none;
+                gap: 6px;
+                font-weight: 500;
+                color: #1e1e1e;
+                font-size: 15px;
+            }
+            .mobile-toggle span {
+                font-size: 24px;
+                line-height: 1;
+                margin-right: 4px;
+            }
+            #menu-checkbox {
+                display: none;
+            }
+        }
+
+        /* 按钮颜色 (保留原样) */
         .btn-110 { background: #e34c26; }      /* 橙红 */
         .btn-1-10 { background: #2b7a4b; }     /* 墨绿 */
         .btn-101 { background: #1e6f9f; }       /* 深蓝 */
         .btn-10-1 { background: #b34c8c; }      /* 紫罗兰 */
         .btn-011 { background: #d48b1c; }        /* 金橙 */
         .btn-01-1 { background: #4c6ea8; }       /* 灰蓝 */
+        .control-btn:hover { filter: brightness(0.94); }
+        .control-btn.active { background: #993399 !important; }  /* 隐藏状态时变紫灰 (原定义) */
+
+        /* 小色块 */
+        .color-chip-110 { background: #e34c26; }
+        .color-chip-1-10 { background: #2b7a4b; }
+        .color-chip-101 { background: #1e6f9f; }
+        .color-chip-10-1 { background: #b34c8c; }
+        .color-chip-011 { background: #d48b1c; }
+        .color-chip-01-1 { background: #4c6ea8; }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
 
-    <!-- 左侧信息面板 (已更新轴说明) -->
-    <div class="info-panel">
-        <h4>简立方晶胞 · {110} 晶面族</h4>
-        <p>📐 晶格常数 a = 1 | 坐标：X右、Y左、Z上</p>
-        <p>🔘 灰色球：顶点原子 (8个)</p>
-        <p>⚫ 灰色框：晶胞边界 | 浅灰线：棱边</p>
-        <p>🎯 彩色矩形：{110}晶面在晶胞内的精确截面</p>
-        <p style="margin-top:8px;"><strong>面指数</strong>:</p>
-        <ul>
-            <li><span style="color:#e34c26;">●</span> (110)  <span style="color:#2b7a4b;">●</span> (1-10)</li>
-            <li><span style="color:#1e6f9f;">●</span> (101)  <span style="color:#b34c8c;">●</span> (10-1)</li>
-            <li><span style="color:#d48b1c;">●</span> (011)  <span style="color:#4c6ea8;">●</span> (01-1)</li>
-        </ul>
-        <p>🖱️ 操作：左键旋转 | 滚轮缩放 | 右键平移</p>
-        <p>🔘 右侧按钮单独控制每个晶面 (初始全部隐藏)</p>
+    <!-- 左侧面板 - 可折叠 (移动自动收起) -->
+    <div class="info-panel" id="infoPanel">
+        <div class="info-header" id="infoHeader">
+            <h4>简立方晶胞 · {110}晶面族</h4>
+            <div class="info-toggle-btn" id="infoToggleBtn">−</div>
+        </div>
+        <div class="info-content" id="infoContent">
+            <p>📐 晶格常数 a = 1 | 坐标：X右、Y左、Z上</p>
+            <p>🔘 灰色球：格点</p>
+            <p>🎯 彩色矩形：{110}晶面</p>
+            <p style="margin-top:6px;"><strong>面指数</strong>:</p>
+            <ul style="list-style:none; margin-left:5px;">
+                <li><span class="color-dot color-chip-110"></span> (110)  <span class="color-dot color-chip-1-10" style="margin-left:12px;"></span> (1-10)</li>
+                <li><span class="color-dot color-chip-101"></span> (101)  <span class="color-dot color-chip-10-1" style="margin-left:12px;"></span> (10-1)</li>
+                <li><span class="color-dot color-chip-011"></span> (011)  <span class="color-dot color-chip-01-1" style="margin-left:12px;"></span> (01-1)</li>
+            </ul>
+            <p>🖱️ 左键旋转 | 滚轮缩放 | 右键平移</p>
+        </div>
     </div>
 
-    <!-- 按钮面板 (与之前相同) -->
+    <!-- 右侧控制区 (移动版下拉菜单) -->
     <div class="button-panel">
-        <button class="control-btn btn-110 active" id="btn110">显示 (110) 面</button>
-        <button class="control-btn btn-1-10 active" id="btn1-10">显示 (1-10) 面</button>
-        <button class="control-btn btn-101 active" id="btn101">显示 (101) 面</button>
-        <button class="control-btn btn-10-1 active" id="btn10-1">显示 (10-1) 面</button>
-        <button class="control-btn btn-011 active" id="btn011">显示 (011) 面</button>
-        <button class="control-btn btn-01-1 active" id="btn01-1">显示 (01-1) 面</button>
+        <!-- 移动端开关：checkbox + label (只在移动可见) -->
+        <input type="checkbox" id="menu-checkbox" style="display:none;">
+        <label for="menu-checkbox" class="mobile-toggle">
+            <span>☰</span> 晶面菜单
+        </label>
+
+        <!-- 六个晶面按钮 (包裹在menu-items中) -->
+        <div class="menu-items">
+            <button class="control-btn btn-110 active" id="btn110">显示 (110) 面</button>
+            <button class="control-btn btn-1-10 active" id="btn1-10">显示 (1-10) 面</button>
+            <button class="control-btn btn-101 active" id="btn101">显示 (101) 面</button>
+            <button class="control-btn btn-10-1 active" id="btn10-1">显示 (10-1) 面</button>
+            <button class="control-btn btn-011 active" id="btn011">显示 (011) 面</button>
+            <button class="control-btn btn-01-1 active" id="btn01-1">显示 (01-1) 面</button>
+        </div>
     </div>
 
     <script type="importmap">
@@ -82,16 +275,16 @@
     </script>
 
     <script type="module">
+        // ---------- 原有Three.js核心代码 (保持不变，仅复制并确保坐标一致) ----------
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // ---------- 1. 初始化场景 ----------
+        // 1. 初始化场景
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf8f8f8);
 
-        // 相机位置调整：从右前上方观察，使X右、Z上、Y里
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(4, 2.5, 4);  // X=4, Y(向上)=2.5, Z(纵深)=4
+        camera.position.set(4, 2.5, 4);
         camera.lookAt(1, 1, 1);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -105,12 +298,14 @@
         controls.target.set(1, 1, 1);
         controls.enableZoom = true;
         controls.rotateSpeed = 1.0;
+        // 移动端旋转优化
+        controls.rotateSpeed = 0.8;
+        controls.zoomSpeed = 1.0;
+        controls.panSpeed = 0.8;
 
-        // 辅助元素：坐标轴 (红X, 绿Y, 蓝Z) — 绿为向上，蓝为向里，注意与用户定义的Z向上区分
         scene.add(new THREE.AxesHelper(3.5));
         scene.add(new THREE.GridHelper(6, 20, 0xcccccc, 0xdddddd));
 
-        // 光源
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
         scene.add(ambientLight);
         
@@ -124,20 +319,13 @@
 
         scene.fog = new THREE.Fog(0xf8f8f8, 5, 15);
 
-        // ---------- 2. 简立方晶胞基础结构 (坐标已调整为：X右, Y上(原Z), Z里(原Y)) ----------
-        const a = 2.0;
-        // 晶胞中心在用户坐标 (1,1,1) 映射到Three.js为 (1,1,1) 因为对称，但注意顺序：用户(x,y,z) -> Three.js (x, z, y)
-        // 为了方便，我们直接定义顶点在Three.js坐标系中的位置，即按照用户习惯：x向右，z向上，y向里
-        // 因此顶点坐标 (x, y, z) 在Three.js中为 (x, z, y)
-        // 下面列出8个顶点在用户坐标系下的坐标 (x向右, y向里, z向上)，然后转换为Three.js (x, z, y)
+        // 2. 简立方晶胞基础结构 (坐标转换：用户(x,y,z) -> Three.js (x, z, y))
         const userVertices = [
             [0,0,0], [2,0,0], [0,2,0], [0,0,2],
             [2,2,0], [2,0,2], [0,2,2], [2,2,2]
         ];
-        // 转换为Three.js坐标 (x, z, y)
         const vertexPositions = userVertices.map(v => [v[0], v[2], v[1]]);
 
-        // 原子球
         const atomGeo = new THREE.SphereGeometry(0.1, 24, 24);
         const atomMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
         vertexPositions.forEach(pos => {
@@ -146,33 +334,20 @@
             scene.add(atom);
         });
 
-        // 晶胞框 (轴对齐，中心在 (1,1,1) 因为所有顶点坐标平均后仍是 (1,1,1))
-        const boxGeo = new THREE.BoxGeometry(a, a, a);
+        const boxGeo = new THREE.BoxGeometry(2, 2, 2);
         const edges = new THREE.EdgesGeometry(boxGeo);
         const boxLines = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x707070 }));
         boxLines.position.set(1, 1, 1);
         scene.add(boxLines);
 
-        // 棱边：12条，连接相邻顶点。我们通过顶点列表生成
-        // 建立顶点索引以便使用
-        const vIndex = {
-            '0,0,0': 0, '2,0,0': 1, '0,2,0': 2, '0,0,2': 3,
-            '2,2,0': 4, '2,0,2': 5, '0,2,2': 6, '2,2,2': 7
-        };
-        // 为了方便，我们使用顶点坐标字符串作为key，但需要精确匹配
-        // 直接手动列出12条棱的端点索引（基于用户坐标的相邻关系）
         const edgesPairs = [
-            // 沿x方向 (y,z不变)
             [[0,0,0], [2,0,0]], [[0,2,0], [2,2,0]], [[0,0,2], [2,0,2]], [[0,2,2], [2,2,2]],
-            // 沿y方向 (x,z不变)
             [[0,0,0], [0,2,0]], [[2,0,0], [2,2,0]], [[0,0,2], [0,2,2]], [[2,0,2], [2,2,2]],
-            // 沿z方向 (x,y不变)
             [[0,0,0], [0,0,2]], [[2,0,0], [2,0,2]], [[0,2,0], [0,2,2]], [[2,2,0], [2,2,2]]
         ];
         
         const bondMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa });
         edgesPairs.forEach(([p1, p2]) => {
-            // 将用户坐标转换为Three.js坐标
             const tp1 = [p1[0], p1[2], p1[1]];
             const tp2 = [p2[0], p2[2], p2[1]];
             const points = [new THREE.Vector3(...tp1), new THREE.Vector3(...tp2)];
@@ -181,14 +356,12 @@
             scene.add(line);
         });
 
-        // ---------- 3. 定义 {110} 晶面族 矩形截面 (向量已转换到Three.js坐标系) ----------
-        // 每个面给出在Three.js坐标系下的法向量、u切向(对应矩形宽方向)、v切向(对应矩形高方向)
-        // 宽 = 2, 高 = 2√2, 中心(1,1,1)
+        // 3. 定义 {110} 晶面族 (保持原有平面数据与旋转逻辑不变)
         const planeData = [
             { 
                 idx: '(110)', 
                 normal: [1, 0, 1],        // 原(1,1,0) -> (1,0,1)
-                u: [0, 1, 0],              // 原(0,0,1) -> (0,1,0) 沿Y轴(向上)
+                u: [0, 1, 0],              // 原(0,0,1) -> (0,1,0)
                 v: [-1, 0, 1],             // 原(-1,1,0) -> (-1,0,1)
                 color: 0xe34c26, btnId: 'btn110'
             },
@@ -201,8 +374,8 @@
             },
             { 
                 idx: '(101)', 
-                normal: [1, 1, 0],        // 原(1,0,1) -> (1,1,0) 注意原(101)法向量(1,0,1) 转换后 (1,1,0)? 重新计算：用户(1,0,1) -> Three.js (1,1,0) 因为y=0,z=1 -> (1,1,0)
-                u: [0, 0, 1],              // 原(0,1,0) -> (0,0,1) 沿Z向里
+                normal: [1, 1, 0],        // 原(1,0,1) -> (1,1,0)
+                u: [0, 0, 1],              // 原(0,1,0) -> (0,0,1)
                 v: [1, -1, 0],             // 原(1,0,-1) -> (1,-1,0)
                 color: 0x1e6f9f, btnId: 'btn101'
             },
@@ -215,16 +388,16 @@
             },
             { 
                 idx: '(011)', 
-                normal: [0, 1, 1],        // 原(0,1,1) -> (0,1,1) 因为x=0,y=1,z=1 -> (0,1,1) 注意y和z交换后，原y变成新z，原z变成新y，所以 (0,1,1) 不变？检查：原(0,1,1): x=0,y=1,z=1 -> Three.js (0,1,1) 确实不变
-                u: [1, 0, 0],              // 原(1,0,0) -> (1,0,0) 沿X
-                v: [0, -1, 1],             // 原(0,-1,1) -> (0,1,1?) 需要重新计算：原(0,-1,1) 即 x=0,y=-1,z=1 -> Three.js (0,1,-1) 因为新y=z=1, 新z=y=-1 -> (0,1,-1) 但这样与法向量点积? 法向量(0,1,1)点乘(0,1,-1)=0+1-1=0，正确。
+                normal: [0, 1, 1],        // 原(0,1,1) -> (0,1,1)
+                u: [1, 0, 0],              // 原(1,0,0) -> (1,0,0)
+                v: [0, -1, 1],             // 原(0,-1,1) -> (0,1,-1)? 原(0,-1,1) => Three.js (0,1,-1) 但代码中计算v用[0, -1, 1]在Three.js中为(0, -1, 1)，需确保与原逻辑一致，保持原样
                 color: 0xd48b1c, btnId: 'btn011'
             },
             { 
                 idx: '(01-1)', 
-                normal: [0, 1, -1],       // 原(0,1,-1) -> (0,-1,1?) 原(0,1,-1): x=0,y=1,z=-1 -> Three.js (0,-1,1) 因为新y=z=-1, 新z=y=1 => (0,-1,1)
+                normal: [0, 1, -1],       // 原(0,1,-1) -> (0,-1,1)
                 u: [1, 0, 0],              // 原(1,0,0) -> (1,0,0)
-                v: [0, 1, 1],              // 原(0,1,1) -> (0,1,1?) 原(0,1,1) -> Three.js (0,1,1) 点积法向量(0,-1,1)=0-1+1=0 正确。
+                v: [0, 1, 1],              // 原(0,1,1) -> (0,1,1)
                 color: 0x4c6ea8, btnId: 'btn01-1'
             }
         ];
@@ -237,7 +410,6 @@
         planeData.forEach(item => {
             const normal = new THREE.Vector3(...item.normal).normalize();
             const uVec = new THREE.Vector3(...item.u).normalize();
-            // v向量直接用给定的，但需确保垂直于normal（已保证）
             const vVec = new THREE.Vector3(...item.v).normalize();
 
             const material = new THREE.MeshPhongMaterial({
@@ -252,7 +424,7 @@
             const planeMesh = new THREE.Mesh(planeGeo, material);
             planeMesh.position.set(1, 1, 1); // 晶胞中心
 
-            // 旋转使局部X轴指向uVec，局部Y轴指向vVec，局部Z轴指向normal
+            // 旋转使局部X轴指向uVec，局部Y轴指向vVec，局部Z轴指向normal (保持原有旋转逻辑)
             const q1 = new THREE.Quaternion().setFromUnitVectors(
                 new THREE.Vector3(0, 0, 1),
                 normal
@@ -273,7 +445,7 @@
             });
         });
 
-        // ---------- 4. 绑定按钮事件 ----------
+        // 4. 绑定按钮事件 (与原逻辑一致)
         planeMeshes.forEach(item => {
             const btn = document.getElementById(item.btnId);
             if (!btn) return;
@@ -294,7 +466,7 @@
 
         console.log('简立方晶胞，轴已修正：X右、Y里(屏幕内)、Z上。所有晶面初始隐藏。');
 
-        // ---------- 5. 窗口自适应 ----------
+        // 窗口自适应
         window.addEventListener('resize', onWindowResize, false);
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -302,13 +474,47 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // ---------- 6. 动画循环 ----------
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
             renderer.render(scene, camera);
         }
         animate();
+
+        // ---------- 新增: 移动端左侧面板折叠逻辑 (自动收起) ----------
+        const infoPanel = document.getElementById('infoPanel');
+        const infoToggleBtn = document.getElementById('infoToggleBtn');
+        const infoHeader = document.getElementById('infoHeader');
+
+        function setCollapsedBasedOnWidth() {
+            if (window.innerWidth <= 600) {
+                // 移动端默认折叠
+                infoPanel.classList.add('collapsed');
+                infoToggleBtn.textContent = '+';
+            } else {
+                // 桌面端默认展开
+                infoPanel.classList.remove('collapsed');
+                infoToggleBtn.textContent = '−';
+            }
+        }
+
+        // 初始化折叠状态
+        setCollapsedBasedOnWidth();
+
+        // 点击头部切换折叠 (移动/桌面均可手动切换)
+        infoHeader.addEventListener('click', (e) => {
+            e.stopPropagation();
+            infoPanel.classList.toggle('collapsed');
+            infoToggleBtn.textContent = infoPanel.classList.contains('collapsed') ? '+' : '−';
+        });
+
+        // 监听窗口大小变化，重置折叠状态 (保持移动端自动折叠，桌面自动展开)
+        window.addEventListener('resize', () => {
+            setCollapsedBasedOnWidth();
+        });
+
+        // 防止触摸事件冲突导致画布无法操作
+        infoPanel.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
     </script>
 </body>
 </html>
