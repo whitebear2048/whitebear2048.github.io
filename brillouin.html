@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>布里渊区可视化</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            touch-action: manipulation; /* 优化触摸操作 */
+        }
+        body {
+            background: linear-gradient(145deg, #f0f4fa 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(4px);
+            border-radius: 2rem;
+            /*box-shadow: 0 20px 35px -10px rgba(0,0,0,0.3);*/
+            padding: 1.5rem 1.8rem 1.8rem 1.8rem;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            background-color: #ffffff;
+            cursor: pointer;
+            touch-action: none; /* 禁止浏览器默认滚动/缩放，我们自己控制 */
+        }
+        .info-panel {
+            margin-top: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .status {
+            background: #1e2a3e;
+            color: #f0f3f8;
+            padding: 0.6rem 1.2rem;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            flex: 2;
+            min-width: 220px;
+            box-shadow: inset 0 1px 1px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .legend {
+            display: flex;
+            gap: 1rem;
+            background: rgba(30,42,62,0.75);
+            backdrop-filter: blur(8px);
+            padding: 0.5rem 1.2rem;
+            border-radius: 60px;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+            flex-wrap: wrap;
+        }
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .color-badge {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        button {
+            background: #2c3e66;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.85rem;
+        }
+        button:hover { background: #1f2c4b; transform: scale(0.97); }
+        .footer-note {
+            margin-top: 1rem;
+            font-size: 0.75rem;
+            text-align: center;
+            color: #2c3e66;
+            opacity: 0.7;
+        }
+        @media (max-width: 700px) {
+            .legend { font-size: 0.7rem; gap: 0.6rem; }
+            button { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="container">
+        <canvas id="bzCanvas" width="800" height="800" style="width:800px;height:800px;"></canvas>
+        <div class="info-panel">
+            <div class="status" id="statusMsg">✨ 点击布里渊区或中垂线</div>
+            <div class="legend">
+                <span><div class="color-badge" style="background: #FFB347;"></div> 第一区</span>
+                <span><div class="color-badge" style="background: #6A9FB5;"></div> 第二区</span>
+                <span><div class="color-badge" style="background: #E86A6A;"></div> 第三区</span>
+                <span><div class="color-badge" style="background: #2C5F8A;"></div> 中垂线(第一组)</span>
+                <span><div class="color-badge" style="background: #2E8B57;"></div> 中垂线(第二组)</span>
+                <span><div class="color-badge" style="background: #D97706;"></div> 中垂线(第三组)</span>
+                <span><div class="color-badge" style="background: #2C3E66;"></div> 倒格点</span>
+            </div>
+            <div class="btn-group">
+                <button id="zoomInBtn">➕ 放大</button>
+                <button id="zoomOutBtn">➖ 缩小</button>
+                <button id="resetBtn">重置视图</button>
+            </div>
+        </div>
+        <div class="footer-note">
+            💡 点击布里渊区 → 高亮该区及其边界中垂线（第三区时所有中垂线高亮）<br>
+            💡 点击中垂线 → 高亮线并从原点绘制箭头指向对应倒格矢<br>
+            💡 触摸屏支持点击/缩放按钮，双指缩放暂未实现，可用按钮代替
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const canvas = document.getElementById('bzCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = 800, height = 800;
+        canvas.width = width;
+        canvas.height = height;
+
+        // 可变的倒空间范围（支持缩放）
+        let xMin = -2.2, xMax = 2.2, yMin = -2.2, yMax = 2.2;
+        function toCanvasX(x) { return ((x - xMin) / (xMax - xMin)) * width; }
+        function toCanvasY(y) { return height - ((y - yMin) / (yMax - yMin)) * height; }
+
+        // 存储多边形与中垂线
+        let polygons = [];
+        let bisectors = [];
+
+        let highlightedZone = null;      // 1,2,3
+        let highlightedBisector = null;  // 单独高亮的中垂线对象
+
+        // 倒格点
+        const reciprocalPoints = [];
+        for (let h = -2; h <= 2; h++) {
+            for (let k = -2; k <= 2; k++) {
+                if (h === 0 && k === 0) continue;
+                reciprocalPoints.push({x: h, y: k, label: `(${h},${k})`});
+            }
+        }
+
+        // ---------- 1. 第一布里渊区: 正方形 ----------
+        function addFirstZone() {
+            const square = [
+                {x: -0.5, y: -0.5}, {x: 0.5, y: -0.5},
+                {x: 0.5, y: 0.5}, {x: -0.5, y: 0.5}
+            ];
+            polygons.push({
+                path: square, zone: 1, label: "第一布里渊区",
+                fillColor: "rgba(255, 179, 71, 0.65)",
+                strokeColor: "#D97A0C",
+                highlightFill: "rgba(255, 179, 71, 0.95)"
+            });
+        }
+
+        // ---------- 2. 第二布里渊区: 四个等腰直角三角形 ----------
+        function addSecondZone() {
+            const topTri = [{x: -0.5, y: 0.5}, {x: 0.5, y: 0.5}, {x: 0, y: 1}];
+            const bottomTri = [{x: -0.5, y: -0.5}, {x: 0.5, y: -0.5}, {x: 0, y: -1}];
+            const leftTri = [{x: -0.5, y: -0.5}, {x: -0.5, y: 0.5}, {x: -1, y: 0}];
+            const rightTri = [{x: 0.5, y: -0.5}, {x: 0.5, y: 0.5}, {x: 1, y: 0}];
+            for (let tri of [topTri, bottomTri, leftTri, rightTri]) {
+                polygons.push({
+                    path: tri, zone: 2, label: "第二布里渊区",
+                    fillColor: "rgba(106, 159, 181, 0.65)",
+                    strokeColor: "#3D6A7E",
+                    highlightFill: "rgba(106, 159, 181, 0.95)"
+                });
+            }
+        }
+
+        // ---------- 3. 第三布里渊区: 八个全等的直角三角形 ----------
+        function addThirdZone() {
+            const triangles = [
+                // 右方两个
+                [{x: 1, y: 0}, {x: 1, y: 0.5}, {x: 0.5, y: 0.5}],
+                [{x: 1, y: 0}, {x: 1, y: -0.5}, {x: 0.5, y: -0.5}],
+                // 左方两个
+                [{x: -1, y: 0}, {x: -1, y: 0.5}, {x: -0.5, y: 0.5}],
+                [{x: -1, y: 0}, {x: -1, y: -0.5}, {x: -0.5, y: -0.5}],
+                // 上方两个
+                [{x: 0, y: 1}, {x: 0.5, y: 1}, {x: 0.5, y: 0.5}],
+                [{x: 0, y: 1}, {x: -0.5, y: 1}, {x: -0.5, y: 0.5}],
+                // 下方两个
+                [{x: 0, y: -1}, {x: 0.5, y: -1}, {x: 0.5, y: -0.5}],
+                [{x: 0, y: -1}, {x: -0.5, y: -1}, {x: -0.5, y: -0.5}]
+            ];
+            for (let tri of triangles) {
+                polygons.push({
+                    path: tri, zone: 3, label: "第三布里渊区",
+                    fillColor: "rgba(232, 106, 106, 0.65)",
+                    strokeColor: "#B13E3E",
+                    highlightFill: "rgba(232, 106, 106, 0.95)"
+                });
+            }
+        }
+
+        // ---------- 4. 中垂线构造 (分组) ----------
+        // group: 1-第一区边界, 2-第二区边界(对角线), 3-第三区边界(x=±1,y=±1)
+        function addBisector(p1, p2, gx, gy, description, group) {
+            let defaultColor;
+            if (group === 1) defaultColor = "#2C5F8A";   // 深蓝
+            else if (group === 2) defaultColor = "#2E8B57"; // 森林绿
+            else defaultColor = "#D97706";               // 暗橙
+
+            bisectors.push({
+                start: {x: p1.x, y: p1.y},
+                end: {x: p2.x, y: p2.y},
+                gVector: {x: gx, y: gy},
+                description: description,
+                group: group,
+                defaultColor: defaultColor,
+                highlightColor: "#FFAA33",
+                lineWidth: 2.2
+            });
+        }
+
+        function addBisectorByEquation(a, b, c, gx, gy, desc, group) {
+            const bounds = [
+                {x: xMin, y: yMin}, {x: xMax, y: yMin},
+                {x: xMax, y: yMax}, {x: xMin, y: yMax}
+            ];
+            const intersections = [];
+            for (let i = 0; i < 4; i++) {
+                const p1 = bounds[i];
+                const p2 = bounds[(i+1)%4];
+                const val1 = a*p1.x + b*p1.y + c;
+                const val2 = a*p2.x + b*p2.y + c;
+                if (val1 * val2 < 0) {
+                    const t = -val1 / (val2 - val1);
+                    const ix = p1.x + t * (p2.x - p1.x);
+                    const iy = p1.y + t * (p2.y - p1.y);
+                    intersections.push({x: ix, y: iy});
+                } else if (Math.abs(val1) < 1e-8) {
+                    intersections.push({x: p1.x, y: p1.y});
+                }
+            }
+            if (intersections.length >= 2) {
+                addBisector(intersections[0], intersections[1], gx, gy, desc, group);
+            }
+        }
+
+        function buildAllBisectors() {
+            // 第一组：第一区边界 (x=±0.5, y=±0.5)
+            addBisector({x:0.5, y:-2.2}, {x:0.5, y:2.2}, 1, 0, "G = (1,0)", 1);
+            addBisector({x:-0.5, y:-2.2}, {x:-0.5, y:2.2}, -1, 0, "G = (-1,0)", 1);
+            addBisector({x:-2.2, y:0.5}, {x:2.2, y:0.5}, 0, 1, "G = (0,1)", 1);
+            addBisector({x:-2.2, y:-0.5}, {x:2.2, y:-0.5}, 0, -1, "G = (0,-1)", 1);
+
+            // 第二组：面对角线中垂线 (第二区边界)
+            addBisectorByEquation(1, 1, -1, 1, 1, "G = (1,1)", 2);
+            addBisectorByEquation(1, 1, 1, -1, -1, "G = (-1,-1)", 2);
+            addBisectorByEquation(1, -1, -1, 1, -1, "G = (1,-1)", 2);
+            addBisectorByEquation(1, -1, 1, -1, 1, "G = (-1,1)", 2);
+
+            // 第三组：第三区边界 (x=±1, y=±1)
+            addBisector({x:1, y:-2.2}, {x:1, y:2.2}, 2, 0, "G = (2,0)", 3);
+            addBisector({x:-1, y:-2.2}, {x:-1, y:2.2}, -2, 0, "G = (-2,0)", 3);
+            addBisector({x:-2.2, y:1}, {x:2.2, y:1}, 0, 2, "G = (0,2)", 3);
+            addBisector({x:-2.2, y:-1}, {x:2.2, y:-1}, 0, -2, "G = (0,-2)", 3);
+        }
+
+        // 根据高亮的区域，决定某条中垂线是否应该高亮（即不半透明）
+        function isBisectorInHighlightedZone(line) {
+            if (highlightedZone === null) return false;
+            if (highlightedZone === 1) return line.group === 1;
+            if (highlightedZone === 2) return line.group === 1 || line.group === 2;
+            // 第三区：所有中垂线都是其边界的一部分（第一、二、三组全部高亮）
+            if (highlightedZone === 3) return true;
+            return false;
+        }
+
+        // ---------- 绘图函数 ----------
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            drawGridAndAxes();
+
+            // 绘制布里渊区
+            for (let poly of polygons) {
+                let fill = poly.fillColor;
+                if (highlightedZone !== null && poly.zone !== highlightedZone) {
+                    fill = fill.replace(/[\d\.]+\)$/, '0.2)');
+                    if (fill.includes('0.65')) fill = fill.replace('0.65', '0.2');
+                    if (fill.includes('0.95')) fill = fill.replace('0.95', '0.2');
+                } else if (highlightedZone === poly.zone && highlightedZone !== null) {
+                    fill = poly.highlightFill;
+                }
+                drawPolygon(poly.path, fill, poly.strokeColor, 1.5);
+            }
+
+            // 绘制中垂线：根据高亮区域或单独高亮的中垂线控制透明度
+            for (let line of bisectors) {
+                const isSoloHighlight = (highlightedBisector === line);
+                const isZoneHighlight = (highlightedZone !== null && isBisectorInHighlightedZone(line));
+                let color, alpha = 1;
+                if (isSoloHighlight) {
+                    color = line.highlightColor;
+                } else if (isZoneHighlight) {
+                    color = line.defaultColor;
+                } else {
+                    color = line.defaultColor;
+                    alpha = 0.25;
+                }
+                const width = (isSoloHighlight || isZoneHighlight) ? 4 : line.lineWidth;
+                drawLineWithAlpha(line.start, line.end, color, width, alpha);
+                if (isSoloHighlight) {
+                    drawLineWithAlpha(line.start, line.end, "#FFD966", 7, 0.6);
+                    drawLineWithAlpha(line.start, line.end, color, width, 1);
+                }
+            }
+
+            // 倒格点
+            for (let pt of reciprocalPoints) {
+                const cx = toCanvasX(pt.x), cy = toCanvasY(pt.y);
+                ctx.beginPath();
+                ctx.arc(cx, cy, 5, 0, 2*Math.PI);
+                ctx.fillStyle = "#2C3E66";
+                ctx.fill();
+                ctx.fillStyle = "white";
+                ctx.font = "bold 12px 'Segoe UI'";
+                ctx.fillText(pt.label, cx+6, cy-4);
+            }
+            // 原点
+            const ox = toCanvasX(0), oy = toCanvasY(0);
+            ctx.beginPath();
+            ctx.arc(ox, oy, 5, 0, 2*Math.PI);
+            ctx.fillStyle = "#000000";
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.fillText("Γ", ox+5, oy-3);
+
+            // 如果高亮了中垂线，绘制从原点指向倒格矢的箭头
+            if (highlightedBisector) {
+                const g = highlightedBisector.gVector;
+                if (g && (g.x !== 0 || g.y !== 0)) {
+                    drawArrowFromOriginFixed(g.x, g.y);
+                }
+            }
+        }
+
+        function drawLineWithAlpha(p1, p2, color, width, alpha) {
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(p1.x), toCanvasY(p1.y));
+            ctx.lineTo(toCanvasX(p2.x), toCanvasY(p2.y));
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawPolygon(points, fillColor, strokeColor, lineWidth) {
+            if (points.length < 3) return;
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(points[0].x), toCanvasY(points[0].y));
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(toCanvasX(points[i].x), toCanvasY(points[i].y));
+            }
+            ctx.closePath();
+            ctx.fillStyle = fillColor;
+            ctx.fill();
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+        }
+
+        function drawArrowFromOriginFixed(gx, gy) {
+            const sCanvas = {x: toCanvasX(0), y: toCanvasY(0)};
+            const eCanvas = {x: toCanvasX(gx), y: toCanvasY(gy)};
+
+            ctx.beginPath();
+            ctx.moveTo(sCanvas.x, sCanvas.y);
+            ctx.lineTo(eCanvas.x, eCanvas.y);
+            ctx.strokeStyle = "#E63946";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            const dx = eCanvas.x - sCanvas.x;
+            const dy = eCanvas.y - sCanvas.y;
+            const angle = Math.atan2(dy, dx);
+            const arrowSize = 12;
+
+            const tipX = eCanvas.x;
+            const tipY = eCanvas.y;
+            const backX = tipX - arrowSize * 0.75 * Math.cos(angle);
+            const backY = tipY - arrowSize * 0.75 * Math.sin(angle);
+            const leftX = backX - arrowSize * 0.4 * Math.sin(angle);
+            const leftY = backY + arrowSize * 0.4 * Math.cos(angle);
+            const rightX = backX + arrowSize * 0.4 * Math.sin(angle);
+            const rightY = backY - arrowSize * 0.4 * Math.cos(angle);
+
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(leftX, leftY);
+            ctx.lineTo(rightX, rightY);
+            ctx.fillStyle = "#E63946";
+            ctx.fill();
+
+            ctx.font = "bold 14px 'Segoe UI'";
+            ctx.fillStyle = "#C41E3A";
+            ctx.fillText(`G = (${gx},${gy})`, eCanvas.x + 8, eCanvas.y - 6);
+        }
+
+        function drawGridAndAxes() {
+            ctx.save();
+            ctx.globalAlpha = 0.25;
+            ctx.beginPath();
+            for (let x = -2; x <= 2; x+=0.5) {
+                ctx.moveTo(toCanvasX(x), toCanvasY(yMin));
+                ctx.lineTo(toCanvasX(x), toCanvasY(yMax));
+                ctx.moveTo(toCanvasX(xMin), toCanvasY(x));
+                ctx.lineTo(toCanvasX(xMax), toCanvasY(x));
+            }
+            ctx.strokeStyle = "#6c757d";
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(0), toCanvasY(yMin));
+            ctx.lineTo(toCanvasX(0), toCanvasY(yMax));
+            ctx.moveTo(toCanvasX(xMin), toCanvasY(0));
+            ctx.lineTo(toCanvasX(xMax), toCanvasY(0));
+            ctx.strokeStyle = "#4a5568";
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // ---------- 交互检测 ----------
+        function isPointInPolygon(px, py, poly) {
+            let inside = false;
+            for (let i = 0, j = poly.length-1; i < poly.length; j = i++) {
+                const xi = poly[i].x, yi = poly[i].y;
+                const xj = poly[j].x, yj = poly[j].y;
+                const intersect = ((yi > py) != (yj > py)) &&
+                    (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        function distanceToSegment(px, py, a, b) {
+            const ax = px - a.x, ay = py - a.y;
+            const bx = b.x - a.x, by = b.y - a.y;
+            const dot = ax * bx + ay * by;
+            const len2 = bx * bx + by * by;
+            if (len2 === 0) return Math.hypot(ax, ay);
+            let t = dot / len2;
+            t = Math.max(0, Math.min(1, t));
+            const projX = a.x + t * bx;
+            const projY = a.y + t * by;
+            return Math.hypot(px - projX, py - projY);
+        }
+
+        // 将鼠标/触摸坐标转换为倒空间坐标
+        function getKFromEvent(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
+            const kx = xMin + (canvasX / width) * (xMax - xMin);
+            const ky = yMin + ((height - canvasY) / height) * (yMax - yMin);
+            return { kx, ky, canvasX, canvasY };
+        }
+
+        function handleClickAt(clientX, clientY) {
+            const { kx, ky, canvasX, canvasY } = getKFromEvent(clientX, clientY);
+
+            // 优先检测中垂线
+            let clickedBisector = null;
+            let minDist = 10;
+            for (let line of bisectors) {
+                const p1c = {x: toCanvasX(line.start.x), y: toCanvasY(line.start.y)};
+                const p2c = {x: toCanvasX(line.end.x), y: toCanvasY(line.end.y)};
+                const dist = distanceToSegment(canvasX, canvasY, p1c, p2c);
+                if (dist < minDist) {
+                    minDist = dist;
+                    clickedBisector = line;
+                }
+            }
+
+            if (clickedBisector) {
+                highlightedBisector = clickedBisector;
+                highlightedZone = null;
+                document.getElementById('statusMsg').innerHTML = `🔍 中垂线 ${clickedBisector.description}  箭头指向倒格矢`;
+                draw();
+                return;
+            }
+
+            // 检测布里渊区
+            let clickedZone = null;
+            for (let poly of polygons) {
+                if (isPointInPolygon(kx, ky, poly.path)) {
+                    clickedZone = poly.zone;
+                    break;
+                }
+            }
+            if (clickedZone !== null) {
+                highlightedZone = clickedZone;
+                highlightedBisector = null;
+                const zoneName = clickedZone === 1 ? "第一布里渊区" : (clickedZone === 2 ? "第二布里渊区" : "第三布里渊区");
+                document.getElementById('statusMsg').innerHTML = `📍 已选中 ${zoneName}，其边界中垂线已高亮`;
+                draw();
+            } else {
+                highlightedZone = null;
+                highlightedBisector = null;
+                document.getElementById('statusMsg').innerHTML = `✨ 点击布里渊区或中垂线`;
+                draw();
+            }
+        }
+
+        // 缩放函数（以原点为中心）
+        function zoom(factor) {
+            const newWidth = (xMax - xMin) * factor;
+            const newHeight = (yMax - yMin) * factor;
+            // 限制最大最小范围，避免过大或过小
+            if (newWidth < 0.6 || newWidth > 8.0) return;
+            const centerX = (xMin + xMax) / 2;
+            const centerY = (yMin + yMax) / 2;
+            xMin = centerX - newWidth / 2;
+            xMax = centerX + newWidth / 2;
+            yMin = centerY - newHeight / 2;
+            yMax = centerY + newHeight / 2;
+            draw();
+        }
+
+        function resetView() {
+            xMin = -2.2;
+            xMax = 2.2;
+            yMin = -2.2;
+            yMax = 2.2;
+            draw();
+        }
+
+        // ---------- 事件绑定 ----------
+        function initEvents() {
+            // 鼠标事件
+            canvas.addEventListener('click', (e) => {
+                handleClickAt(e.clientX, e.clientY);
+            });
+            // 触摸事件（移动端）
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // 阻止滚动
+                const touch = e.touches[0];
+                handleClickAt(touch.clientX, touch.clientY);
+            });
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault(); // 防止页面滚动
+            });
+            // 缩放按钮
+            document.getElementById('zoomInBtn').addEventListener('click', () => zoom(0.8));
+            document.getElementById('zoomOutBtn').addEventListener('click', () => zoom(1.2));
+            document.getElementById('resetBtn').addEventListener('click', resetView);
+        }
+
+        // 初始化所有几何体
+        function init() {
+            addFirstZone();
+            addSecondZone();
+            addThirdZone();
+            buildAllBisectors();
+            initEvents();
+            draw();
+        }
+
+        init();
+    })();
+</script>
+</body>
+</html>
