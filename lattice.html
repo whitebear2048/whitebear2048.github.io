@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>倒格子与正格子可视化</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #f0f4fa 0%, #e2e8f2 100%);
+            font-family: 'Segoe UI', 'Roboto', 'Noto Sans', system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .visualization-container {
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(2px);
+            border-radius: 2.5rem;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+            padding: 1.5rem;
+            width: 1300px;
+            max-width: 98vw;
+        }
+        .split-view {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        .panel {
+            flex: 1;
+            min-width: 280px;
+            background: #ffffffdd;
+            backdrop-filter: blur(4px);
+            border-radius: 2rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            padding: 1rem;
+            transition: all 0.2s;
+        }
+        .panel h3 {
+            text-align: center;
+            margin: 0 0 0.75rem 0;
+            font-weight: 600;
+            color: #1e2a3e;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .panel h3 span {
+            background: #2c3e66;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 40px;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 1.25rem;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(0,0,0,0.05);
+            width: 100%;
+            height: auto;
+            cursor: crosshair;
+        }
+        .control-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 1.2rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.8rem;
+            background: #f0f3f9;
+            padding: 0.8rem 1.5rem;
+            border-radius: 3rem;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            padding: 5px 16px;
+            border-radius: 40px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .slider-group label {
+            font-weight: 600;
+            color: #1e466e;
+        }
+        input[type="range"] {
+            width: 200px;
+            cursor: pointer;
+        }
+        .value-display {
+            background: #1e2a3e;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 32px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        button {
+            background: #2c3e66;
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 8px 22px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button:hover {
+            background: #1f2c4b;
+            transform: scale(0.97);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+        .transform-btn {
+            background: #c44536;
+        }
+        .transform-btn:hover {
+            background: #a53729;
+        }
+        .primitive-btn {
+            background: #2d6a4f;
+        }
+        .info-card {
+            background: #eef2f9;
+            border-radius: 1.5rem;
+            margin-top: 0.8rem;
+            padding: 0.8rem 1.2rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 0.9rem;
+            border: 1px solid #cbd5e6;
+            box-shadow: inset 0 1px 0 white, 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .info-item {
+            background: white;
+            border-radius: 2rem;
+            padding: 0.3rem 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            color: #1e293b;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            justify-content: center;
+            flex: 1;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #4a5b7a;
+            font-family: system-ui;
+        }
+        .info-value {
+            color: #c2410c;
+            font-weight: 700;
+        }
+        .origin-badge {
+            background: #fbbf24;
+            color: #7c2d12;
+            padding: 2px 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            color: #5a6874;
+            margin-top: 0.8rem;
+        }
+        @media (max-width: 800px) {
+            .split-view { flex-direction: column; }
+            .info-card { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+<div class="visualization-container">
+    <div class="split-view">
+        <!-- 左侧: 正格子 -->
+        <div class="panel">
+            <h3>正格子 (实空间) <span>Direct Lattice</span></h3>
+            <canvas id="realCanvas" width="500" height="500" style="width:100%; height:auto; max-width:500px; aspect-ratio:1/1"></canvas>
+            <div style="display: flex; justify-content: center; margin-top: 12px; gap: 12px;">
+                <button id="primitiveBtn" class="primitive-btn">显示原胞 & 基矢</button>
+            </div>
+        </div>
+
+        <!-- 右侧: 倒格子 -->
+        <div class="panel">
+            <h3>倒格子 (倒易空间) <span>Reciprocal Lattice</span></h3>
+            <canvas id="recipCanvas" width="500" height="500" style="width:100%; height:auto; max-width:500px; aspect-ratio:1/1"></canvas>
+            <div style="display: flex; justify-content: center; margin-top: 12px; gap: 12px;">
+                <button id="transformBtn" class="transform-btn">生成倒格子</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 控制条 + 信息显示 -->
+    <div class="control-bar">
+        <div class="slider-group">
+            <span>晶格常数 a :</span>
+            <input type="range" id="latticeSlider" min="0.6" max="2.2" step="0.01" value="1.2">
+            <span id="aValue" class="value-display">1.20</span>
+        </div>
+        
+    </div>
+
+    <!-- 矢量信息展示区 -->
+    <div class="info-card" id="vectorInfo">
+        <div class="info-item">
+            <span class="info-label">当前选中格点：</span>
+            <span id="selectedIndex" class="info-value">( — , — )</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">正格矢 |R| =</span>
+            <span id="realVecLen" class="info-value">—</span>
+            <span style="font-size:0.75rem;">(a·√(n²+m²))</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">倒格矢 |G| =</span>
+            <span id="recipVecLen" class="info-value">—</span>
+            <span style="font-size:0.75rem;">(2π/a·√(h²+k²))</span>
+        </div>
+        <div class="origin-badge" style="margin-left:auto;">原点(0,0) 金色高亮</div>
+    </div>
+    <footer>💡 单击格点，显示矢量长度 | 调整晶格常数 a 观察格点同步变化<br>
+    💡 点击任意正格点，显示矢量信息
+    </footer>
+</div>
+
+<script>
+    (function(){
+        // ---------- 全局参数 ----------
+        let a = 1.2;                // 晶格常数
+        let showReciprocal = false; // 右侧是否显示倒格子点阵
+        let showPrimitive = false;   // 是否显示原胞及基矢
+        let highlightIndex = null;   // 当前高亮的格点索引 {n, m}
+        
+        // DOM 元素
+        const realCanvas = document.getElementById('realCanvas');
+        const recipCanvas = document.getElementById('recipCanvas');
+        const ctxReal = realCanvas.getContext('2d');
+        const ctxRecip = recipCanvas.getContext('2d');
+        const transformBtn = document.getElementById('transformBtn');
+        const primitiveBtn = document.getElementById('primitiveBtn');
+        const latticeSlider = document.getElementById('latticeSlider');
+        const aValueSpan = document.getElementById('aValue');
+        
+        // 信息展示元素
+        const selectedIndexSpan = document.getElementById('selectedIndex');
+        const realVecLenSpan = document.getElementById('realVecLen');
+        const recipVecLenSpan = document.getElementById('recipVecLen');
+        
+        const CANVAS_SIZE = 500;
+        realCanvas.width = CANVAS_SIZE;
+        realCanvas.height = CANVAS_SIZE;
+        recipCanvas.width = CANVAS_SIZE;
+        recipCanvas.height = CANVAS_SIZE;
+        
+        let realBound = 3.8;    // 正格子物理边界（固定，保证视野）
+        
+        // ---------- 辅助函数：坐标映射 ----------
+        function mapRealToCanvas(x, y) {
+            const cx = CANVAS_SIZE / 2;
+            const cy = CANVAS_SIZE / 2;
+            const scale = CANVAS_SIZE / (2 * realBound);
+            const px = cx + x * scale;
+            const py = cy - y * scale;
+            return {x: px, y: py};
+        }
+        
+        // 倒格子动态边界计算
+        function computeReciprocalBound(a) {
+            const bLen = (2 * Math.PI) / a;
+            const maxHK = 4;   // 显示 ±3 ~ ±4 范围确保美观
+            let neededBound = maxHK * bLen + 0.8;
+            neededBound = Math.max(neededBound, bLen + 1.2);
+            return Math.min(14, Math.max(3.5, neededBound));
+        }
+        
+        function mapRecipToCanvas(x, y, bound) {
+            const cx = CANVAS_SIZE / 2;
+            const cy = CANVAS_SIZE / 2;
+            const scale = CANVAS_SIZE / (2 * bound);
+            const px = cx + x * scale;
+            const py = cy - y * scale;
+            return {x: px, y: py};
+        }
+        
+        // 绘制箭头
+        function drawArrow(ctx, fromX, fromY, toX, toY, color, lineWidth=2.5) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            const arrowSize = 10;
+            const headX = toX, headY = toY;
+            const wing1x = headX - arrowSize * Math.cos(angle - Math.PI / 6);
+            const wing1y = headY - arrowSize * Math.sin(angle - Math.PI / 6);
+            const wing2x = headX - arrowSize * Math.cos(angle + Math.PI / 6);
+            const wing2y = headY - arrowSize * Math.sin(angle + Math.PI / 6);
+            ctx.beginPath();
+            ctx.moveTo(headX, headY);
+            ctx.lineTo(wing1x, wing1y);
+            ctx.lineTo(wing2x, wing2y);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        function drawUnitCell(ctx, originX, originY, a1x, a1y, a2x, a2y, color, lineStyle='solid') {
+            ctx.save();
+            ctx.beginPath();
+            const p1 = {x: originX, y: originY};
+            const p2 = {x: originX + a1x, y: originY + a1y};
+            const p3 = {x: originX + a1x + a2x, y: originY + a1y + a2y};
+            const p4 = {x: originX + a2x, y: originY + a2y};
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.lineTo(p4.x, p4.y);
+            ctx.closePath();
+            ctx.setLineDash(lineStyle === 'dash' ? [6, 6] : []);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.2;
+            ctx.stroke();
+            ctx.fillStyle = `${color}20`;
+            ctx.fill();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+        
+        // ---------- 更新矢量信息显示 ----------
+        function updateVectorInfo() {
+            if (!highlightIndex) {
+                selectedIndexSpan.innerText = "( — , — )";
+                realVecLenSpan.innerText = "—";
+                recipVecLenSpan.innerText = "—";
+                return;
+            }
+            const n = highlightIndex.n;
+            const m = highlightIndex.m;
+            selectedIndexSpan.innerText = `(${n}, ${m})`;
+            const realLen = a * Math.sqrt(n*n + m*m);
+            realVecLenSpan.innerText = realLen.toFixed(4);
+            const recipLen = (2 * Math.PI / a) * Math.sqrt(n*n + m*m);
+            recipVecLenSpan.innerText = recipLen.toFixed(4);
+        }
+        
+        // ---------- 绘制正格子 (网格动态对齐a) ----------
+        function drawRealLattice() {
+            if (!ctxReal) return;
+            ctxReal.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            ctxReal.save();
+            
+            // ---- 绘制背景网格：间距 = a，与格点完全对齐 ----
+            const minIdx = Math.ceil(-realBound / a);
+            const maxIdx = Math.floor(realBound / a);
+            ctxReal.strokeStyle = "#d4dfed";
+            ctxReal.lineWidth = 0.8;
+            // 竖直线 x = i*a
+            for (let i = minIdx; i <= maxIdx; i++) {
+                const xw = i * a;
+                const {x: px} = mapRealToCanvas(xw, 0);
+                if (px >= 0 && px <= CANVAS_SIZE) {
+                    ctxReal.beginPath();
+                    ctxReal.moveTo(px, 0);
+                    ctxReal.lineTo(px, CANVAS_SIZE);
+                    ctxReal.stroke();
+                }
+            }
+            // 水平线 y = i*a
+            for (let i = minIdx; i <= maxIdx; i++) {
+                const yw = i * a;
+                const {y: py} = mapRealToCanvas(0, yw);
+                if (py >= 0 && py <= CANVAS_SIZE) {
+                    ctxReal.beginPath();
+                    ctxReal.moveTo(0, py);
+                    ctxReal.lineTo(CANVAS_SIZE, py);
+                    ctxReal.stroke();
+                }
+            }
+            
+            // 绘制所有正格点
+            const points = [];
+            for (let n = minIdx; n <= maxIdx; n++) {
+                for (let m = minIdx; m <= maxIdx; m++) {
+                    const x = n * a;
+                    const y = m * a;
+                    if (Math.abs(x) > realBound + 0.2 || Math.abs(y) > realBound + 0.2) continue;
+                    const {x: cx, y: cy} = mapRealToCanvas(x, y);
+                    points.push({n, m, cx, cy});
+                }
+            }
+            
+            for (const p of points) {
+                const isOrigin = (p.n === 0 && p.m === 0);
+                const isHighlight = (highlightIndex && highlightIndex.n === p.n && highlightIndex.m === p.m);
+                if (isOrigin) {
+                    ctxReal.beginPath();
+                    ctxReal.arc(p.cx, p.cy, 10, 0, 2 * Math.PI);
+                    ctxReal.fillStyle = "#fbbf24";
+                    ctxReal.shadowBlur = 6;
+                    ctxReal.fill();
+                    ctxReal.beginPath();
+                    ctxReal.arc(p.cx, p.cy, 6, 0, 2 * Math.PI);
+                    ctxReal.fillStyle = "#f59e0b";
+                    ctxReal.fill();
+                    ctxReal.beginPath();
+                    ctxReal.arc(p.cx, p.cy, 3, 0, 2 * Math.PI);
+                    ctxReal.fillStyle = "#ffffff";
+                    ctxReal.fill();
+                } else {
+                    ctxReal.beginPath();
+                    ctxReal.arc(p.cx, p.cy, 5, 0, 2 * Math.PI);
+                    ctxReal.fillStyle = isHighlight ? "#f97316" : "#2c3e66";
+                    ctxReal.fill();
+                    if (!isHighlight) {
+                        ctxReal.beginPath();
+                        ctxReal.arc(p.cx, p.cy, 2, 0, 2 * Math.PI);
+                        ctxReal.fillStyle = "#ffffffcc";
+                        ctxReal.fill();
+                    }
+                }
+                if (isHighlight && !isOrigin) {
+                    ctxReal.beginPath();
+                    ctxReal.arc(p.cx, p.cy, 12, 0, 2 * Math.PI);
+                    ctxReal.strokeStyle = "#ffb347";
+                    ctxReal.lineWidth = 2.5;
+                    ctxReal.stroke();
+                }
+                if (isOrigin && isHighlight) {
+                    ctxReal.beginPath();
+                    ctxReal.arc(p.cx, p.cy, 14, 0, 2 * Math.PI);
+                    ctxReal.strokeStyle = "#ff8c42";
+                    ctxReal.lineWidth = 2.8;
+                    ctxReal.stroke();
+                }
+            }
+            
+            // 原胞和基矢
+            if (showPrimitive) {
+                const originW = {x: 0, y: 0};
+                const a1w = {x: a, y: 0};
+                const a2w = {x: 0, y: a};
+                const O_c = mapRealToCanvas(originW.x, originW.y);
+                const A1_c = mapRealToCanvas(originW.x + a1w.x, originW.y + a1w.y);
+                const A2_c = mapRealToCanvas(originW.x + a2w.x, originW.y + a2w.y);
+                const a1v = {x: A1_c.x - O_c.x, y: A1_c.y - O_c.y};
+                const a2v = {x: A2_c.x - O_c.x, y: A2_c.y - O_c.y};
+                drawUnitCell(ctxReal, O_c.x, O_c.y, a1v.x, a1v.y, a2v.x, a2v.y, "#3b82f6", "dash");
+                drawArrow(ctxReal, O_c.x, O_c.y, A1_c.x, A1_c.y, "#e67e22", 2.8);
+                drawArrow(ctxReal, O_c.x, O_c.y, A2_c.x, A2_c.y, "#e67e22", 2.8);
+                ctxReal.font = "bold 16px 'Segoe UI'";
+                ctxReal.fillStyle = "#d35400";
+                ctxReal.fillText("a₁", (O_c.x + A1_c.x)/2 + 5, (O_c.y + A1_c.y)/2 - 6);
+                ctxReal.fillText("a₂", (O_c.x + A2_c.x)/2 + 8, (O_c.y + A2_c.y)/2 + 4);
+            }
+            ctxReal.restore();
+        }
+        
+        // 绘制倒格子 (原点高亮，网格已对齐格点)
+        function drawReciprocalLattice() {
+            if (!ctxRecip) return;
+            ctxRecip.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+            if (!showReciprocal) {
+                ctxRecip.font = "14px 'Segoe UI'";
+                ctxRecip.fillStyle = "#94a3b8";
+                ctxRecip.textAlign = "center";
+                ctxRecip.fillText("点击下方按钮生成倒格子", CANVAS_SIZE/2, CANVAS_SIZE/2);
+                ctxRecip.textAlign = "left";
+                return;
+            }
+            const bLen = (2 * Math.PI) / a;
+            const b1 = {x: bLen, y: 0};
+            const b2 = {x: 0, y: bLen};
+            const recipBound = computeReciprocalBound(a);
+            const maxH = Math.floor(recipBound / bLen) + 1;
+            const minH = -maxH;
+            const points = [];
+            for (let h = minH; h <= maxH; h++) {
+                for (let k = minH; k <= maxH; k++) {
+                    const x = h * bLen;
+                    const y = k * bLen;
+                    if (Math.abs(x) > recipBound + 0.3 || Math.abs(y) > recipBound + 0.3) continue;
+                    const {x: cx, y: cy} = mapRecipToCanvas(x, y, recipBound);
+                    points.push({h, k, cx, cy});
+                }
+            }
+            // 网格线 (与倒格点对齐)
+            ctxRecip.save();
+            ctxRecip.strokeStyle = "#e2edf5";
+            ctxRecip.lineWidth = 0.5;
+            for (let h = minH; h <= maxH; h++) {
+                const xw = h * bLen;
+                const p1 = mapRecipToCanvas(xw, -recipBound, recipBound);
+                const p2 = mapRecipToCanvas(xw, recipBound, recipBound);
+                ctxRecip.beginPath(); ctxRecip.moveTo(p1.x, p1.y); ctxRecip.lineTo(p2.x, p2.y); ctxRecip.stroke();
+            }
+            for (let k = minH; k <= maxH; k++) {
+                const yw = k * bLen;
+                const p1 = mapRecipToCanvas(-recipBound, yw, recipBound);
+                const p2 = mapRecipToCanvas(recipBound, yw, recipBound);
+                ctxRecip.beginPath(); ctxRecip.moveTo(p1.x, p1.y); ctxRecip.lineTo(p2.x, p2.y); ctxRecip.stroke();
+            }
+            
+            for (const p of points) {
+                const isOrigin = (p.h === 0 && p.k === 0);
+                const isHighlight = (highlightIndex && highlightIndex.n === p.h && highlightIndex.m === p.k);
+                if (isOrigin) {
+                    ctxRecip.beginPath();
+                    ctxRecip.arc(p.cx, p.cy, 10, 0, 2 * Math.PI);
+                    ctxRecip.fillStyle = "#fbbf24";
+                    ctxRecip.fill();
+                    ctxRecip.beginPath();
+                    ctxRecip.arc(p.cx, p.cy, 6, 0, 2 * Math.PI);
+                    ctxRecip.fillStyle = "#f59e0b";
+                    ctxRecip.fill();
+                    ctxRecip.beginPath();
+                    ctxRecip.arc(p.cx, p.cy, 3, 0, 2 * Math.PI);
+                    ctxRecip.fillStyle = "#ffffff";
+                    ctxRecip.fill();
+                } else {
+                    ctxRecip.beginPath();
+                    ctxRecip.arc(p.cx, p.cy, 5, 0, 2 * Math.PI);
+                    ctxRecip.fillStyle = isHighlight ? "#f97316" : "#2b5f8a";
+                    ctxRecip.fill();
+                    if (!isHighlight) {
+                        ctxRecip.beginPath();
+                        ctxRecip.arc(p.cx, p.cy, 2.2, 0, 2 * Math.PI);
+                        ctxRecip.fillStyle = "#ffffff";
+                        ctxRecip.fill();
+                    }
+                }
+                if (isHighlight && !isOrigin) {
+                    ctxRecip.beginPath();
+                    ctxRecip.arc(p.cx, p.cy, 12, 0, 2 * Math.PI);
+                    ctxRecip.strokeStyle = "#ffaa44";
+                    ctxRecip.lineWidth = 2.2;
+                    ctxRecip.stroke();
+                }
+                if (isOrigin && isHighlight) {
+                    ctxRecip.beginPath();
+                    ctxRecip.arc(p.cx, p.cy, 14, 0, 2 * Math.PI);
+                    ctxRecip.strokeStyle = "#ff8c42";
+                    ctxRecip.lineWidth = 2.5;
+                    ctxRecip.stroke();
+                }
+            }
+            
+            if (showPrimitive) {
+                const originW = {x: 0, y: 0};
+                const b1End = {x: b1.x, y: b1.y};
+                const b2End = {x: b2.x, y: b2.y};
+                const O_c = mapRecipToCanvas(originW.x, originW.y, recipBound);
+                const B1_c = mapRecipToCanvas(b1End.x, b1End.y, recipBound);
+                const B2_c = mapRecipToCanvas(b2End.x, b2End.y, recipBound);
+                const a1v = {x: B1_c.x - O_c.x, y: B1_c.y - O_c.y};
+                const a2v = {x: B2_c.x - O_c.x, y: B2_c.y - O_c.y};
+                drawUnitCell(ctxRecip, O_c.x, O_c.y, a1v.x, a1v.y, a2v.x, a2v.y, "#0f67b3", "dash");
+                drawArrow(ctxRecip, O_c.x, O_c.y, B1_c.x, B1_c.y, "#2c7da0", 2.8);
+                drawArrow(ctxRecip, O_c.x, O_c.y, B2_c.x, B2_c.y, "#2c7da0", 2.8);
+                ctxRecip.font = "bold 15px 'Segoe UI'";
+                ctxRecip.fillStyle = "#1f6392";
+                ctxRecip.fillText("b₁", (O_c.x + B1_c.x)/2 + 6, (O_c.y + B1_c.y)/2 - 6);
+                ctxRecip.fillText("b₂", (O_c.x + B2_c.x)/2 + 8, (O_c.y + B2_c.y)/2 + 4);
+            }
+            ctxRecip.restore();
+        }
+        
+        function refreshAll() {
+            drawRealLattice();
+            drawReciprocalLattice();
+            updateVectorInfo();
+        }
+        
+        // 晶格常数更新
+        function updateLatticeConstant(newA) {
+            a = parseFloat(newA);
+            aValueSpan.innerText = a.toFixed(2);
+            refreshAll();
+        }
+        
+        // 处理正格子点击：高亮并显示矢量长度
+        function handleRealCanvasClick(e) {
+            const rect = realCanvas.getBoundingClientRect();
+            const scaleX = realCanvas.width / rect.width;
+            const scaleY = realCanvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+            
+            function canvasToReal(px, py) {
+                const cx = CANVAS_SIZE / 2;
+                const cy = CANVAS_SIZE / 2;
+                const scale = CANVAS_SIZE / (2 * realBound);
+                const worldX = (px - cx) / scale;
+                const worldY = (cy - py) / scale;
+                return {x: worldX, y: worldY};
+            }
+            const world = canvasToReal(mouseX, mouseY);
+            const minIdx = Math.ceil(-realBound / a);
+            const maxIdx = Math.floor(realBound / a);
+            let bestDist = 0.22 * a;
+            let bestIndex = null;
+            for (let n = minIdx; n <= maxIdx; n++) {
+                for (let m = minIdx; m <= maxIdx; m++) {
+                    const gx = n * a;
+                    const gy = m * a;
+                    const dx = gx - world.x;
+                    const dy = gy - world.y;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestIndex = {n, m};
+                    }
+                }
+            }
+            if (bestIndex) {
+                highlightIndex = bestIndex;
+                refreshAll();
+            } else {
+                if (highlightIndex) {
+                    highlightIndex = null;
+                    refreshAll();
+                }
+            }
+        }
+        
+        function onTransform() {
+            if (!showReciprocal) {
+                showReciprocal = true;
+            }
+            highlightIndex = null;
+            refreshAll();
+        }
+        
+        function onTogglePrimitive() {
+            showPrimitive = !showPrimitive;
+            if (showPrimitive && !showReciprocal) {
+                showReciprocal = true;
+            }
+            refreshAll();
+        }
+        
+        // 事件绑定
+        latticeSlider.addEventListener('input', (e) => updateLatticeConstant(e.target.value));
+        transformBtn.addEventListener('click', onTransform);
+        primitiveBtn.addEventListener('click', onTogglePrimitive);
+        realCanvas.addEventListener('click', handleRealCanvasClick);
+        
+        // 初始化
+        showReciprocal = false;
+        showPrimitive = false;
+        highlightIndex = null;
+        refreshAll();
+    })();
+</script>
+</body>
+</html>
