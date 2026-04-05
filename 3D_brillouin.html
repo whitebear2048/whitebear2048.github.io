@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>面心立方布里渊区</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            background-color: #f5f7fc; /* 浅色背景备用 */
+        }
+        /* 信息面板调整为深色半透明，确保在浅色背景下可读 */
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 30, 50, 0.85);
+            backdrop-filter: blur(8px);
+            color: #ffffff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            pointer-events: none;
+            z-index: 10;
+            font-size: 16px;
+            border-left: 4px solid #ffaa44;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            pointer-events: auto;
+        }
+        #info h1 {
+            margin: 0 0 5px;
+            font-size: 20px;
+        }
+        #info p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        #status {
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            color: #ffaa66;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: monospace;
+            pointer-events: none;
+            z-index: 10;
+            border: 1px solid rgba(255,170,68,0.5);
+            font-weight: bold;
+        }
+        .instruction {
+            position: absolute;
+            bottom: 25px;
+            right: 25px;
+            background: rgba(0,0,0,0.6);
+            color: #eee;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            pointer-events: none;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+        }
+        @media (max-width: 600px) {
+            #info { font-size: 12px; top: 10px; left: 10px; padding: 8px 12px; }
+            #info h1 { font-size: 16px; }
+            #status { font-size: 12px; bottom: 12px; left: 12px; }
+            .instruction { font-size: 10px; bottom: 12px; right: 12px; }
+        }
+        /* 针对触屏增加点击反馈区域优化 */
+        canvas {
+            touch-action: none; /* 提升触屏响应 */
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h1>面心立方布里渊区</h1>
+        <p>倒格子为体心立方，每个面是原点与相邻格点连线的中垂面</p>
+<p><strong style="color:#ffaa44;">点击/触摸任意面</strong> → 高亮该面，显示原点到对应格点的连线</p>
+    </div>
+    <div id="status">
+        🖱️ 当前选中: <span id="selected-face" style="color:#ffffff; font-weight:bold;">无</span>
+    </div>
+    <div class="instruction">
+        👆 单指旋转 | 🤏 双指缩放/平移
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // --- 初始化场景 (浅色背景，高对比) ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f4fa); // 柔和浅灰蓝
+        scene.fog = new THREE.FogExp2(0xf0f4fa, 0.008); // 轻微雾效，增强景深
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(3.2, 2.2, 4);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0xf0f4fa, 1.0);
+        document.body.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // 轨道控制 (支持触屏)
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 1.2;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.enableZoom = true;
+        controls.enablePan = true;
+        controls.touchRotate = true;
+        controls.touchZoom = true;
+        controls.target.set(0, 0, 0);
+
+        // --- 灯光系统 (增强在浅色背景下的立体感) ---
+        const ambientLight = new THREE.AmbientLight(0x404060, 0.65);
+        scene.add(ambientLight);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        mainLight.position.set(2, 3, 1.5);
+        scene.add(mainLight);
+        const fillLight = new THREE.PointLight(0x6688cc, 0.5);
+        fillLight.position.set(-1, 1, 2);
+        scene.add(fillLight);
+        const backLight = new THREE.PointLight(0xffaa77, 0.4);
+        backLight.position.set(0, 1.5, -2);
+        scene.add(backLight);
+        const rimLight = new THREE.PointLight(0xffaa88, 0.5);
+        rimLight.position.set(1.2, 1, -1.8);
+        scene.add(rimLight);
+
+        // 辅助参考 (浅色网格，深色线条)
+        const gridHelper = new THREE.GridHelper(5, 20, 0x88aacc, 0x99bbdd);
+        gridHelper.position.y = -1.5;
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.35;
+        scene.add(gridHelper);
+        
+        // 轴线 (深色，半透明)
+        const axesHelper = new THREE.AxesHelper(2.2);
+        axesHelper.material.transparent = true;
+        axesHelper.material.opacity = 0.25;
+        scene.add(axesHelper);
+
+        // ================= 1. 构建精确截角八面体顶点 =================
+        const rawVerts = [];
+        const values = [0.5, 0.25, 0];
+        const permutations = [[0,1,2], [0,2,1], [1,0,2], [1,2,0], [2,0,1], [2,1,0]];
+        const signs = [
+            [1,1,1], [1,1,-1], [1,-1,1], [1,-1,-1],
+            [-1,1,1], [-1,1,-1], [-1,-1,1], [-1,-1,-1]
+        ];
+        permutations.forEach(perm => {
+            signs.forEach(sign => {
+                const x = sign[0] * values[perm[0]];
+                const y = sign[1] * values[perm[1]];
+                const z = sign[2] * values[perm[2]];
+                if (!rawVerts.some(v => Math.abs(v.x-x)<1e-6 && Math.abs(v.y-y)<1e-6 && Math.abs(v.z-z)<1e-6)) {
+                    rawVerts.push(new THREE.Vector3(x, y, z));
+                }
+            });
+        });
+        const vertices = rawVerts; // 24个顶点
+
+        function getIndicesByCondition(cond) {
+            const idxs = [];
+            vertices.forEach((v, i) => { if (cond(v)) idxs.push(i); });
+            return idxs;
+        }
+
+        function sortVerticesOnPlane(verts, normal) {
+            if (verts.length < 3) return verts;
+            const center = new THREE.Vector3();
+            verts.forEach(v => center.add(v));
+            center.divideScalar(verts.length);
+            const refDir = new THREE.Vector3(1, 0, 0);
+            if (Math.abs(normal.dot(refDir)) > 0.9999) refDir.set(0, 0, 1);
+            const u = new THREE.Vector3().crossVectors(normal, refDir).normalize();
+            const vAxis = new THREE.Vector3().crossVectors(u, normal).normalize();
+            verts.sort((a, b) => {
+                const da = new THREE.Vector3().subVectors(a, center);
+                const db = new THREE.Vector3().subVectors(b, center);
+                const angleA = Math.atan2(da.dot(vAxis), da.dot(u));
+                const angleB = Math.atan2(db.dot(vAxis), db.dot(u));
+                return angleA - angleB;
+            });
+            return verts;
+        }
+
+        function createMeshFromSortedVerts(sortedVerts, color, opacity) {
+            if (sortedVerts.length < 3) return null;
+            const positions = [];
+            for (let i = 1; i < sortedVerts.length - 1; i++) {
+                const v0 = sortedVerts[0];
+                const v1 = sortedVerts[i];
+                const v2 = sortedVerts[i+1];
+                positions.push(v0.x, v0.y, v0.z);
+                positions.push(v1.x, v1.y, v1.z);
+                positions.push(v2.x, v2.y, v2.z);
+            }
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+            geometry.computeVertexNormals();
+            const material = new THREE.MeshStandardMaterial({
+                color: color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: opacity,
+                roughness: 0.35,
+                metalness: 0.1,
+                emissive: 0x000000
+            });
+            return new THREE.Mesh(geometry, material);
+        }
+
+        // 6个正方形面 (轴向)
+        const squareDefs = [
+            { cond: v => Math.abs(v.x - 0.5) < 1e-5, name: '+X', normal: new THREE.Vector3(1,0,0) },
+            { cond: v => Math.abs(v.x + 0.5) < 1e-5, name: '-X', normal: new THREE.Vector3(-1,0,0) },
+            { cond: v => Math.abs(v.y - 0.5) < 1e-5, name: '+Y', normal: new THREE.Vector3(0,1,0) },
+            { cond: v => Math.abs(v.y + 0.5) < 1e-5, name: '-Y', normal: new THREE.Vector3(0,-1,0) },
+            { cond: v => Math.abs(v.z - 0.5) < 1e-5, name: '+Z', normal: new THREE.Vector3(0,0,1) },
+            { cond: v => Math.abs(v.z + 0.5) < 1e-5, name: '-Z', normal: new THREE.Vector3(0,0,-1) }
+        ];
+
+        const octantSigns = [
+            [1,1,1], [1,1,-1], [1,-1,1], [1,-1,-1],
+            [-1,1,1], [-1,1,-1], [-1,-1,1], [-1,-1,-1]
+        ];
+        const hexDefs = octantSigns.map(sign => ({
+            cond: v => {
+                const sum = Math.abs(v.x) + Math.abs(v.y) + Math.abs(v.z);
+                if (Math.abs(sum - 0.75) > 1e-5) return false;
+                return v.x * sign[0] >= 0 && v.y * sign[1] >= 0 && v.z * sign[2] >= 0;
+            },
+            name: `(${sign[0]},${sign[1]},${sign[2]})`,
+            normal: new THREE.Vector3(sign[0], sign[1], sign[2]).normalize()
+        }));
+
+        const allFaces = [
+            ...squareDefs.map(def => ({ ...def, type: 'square' })),
+            ...hexDefs.map(def => ({ ...def, type: 'hexagon' }))
+        ];
+
+        const faceMeshes = [];
+
+        allFaces.forEach(def => {
+            const indices = getIndicesByCondition(def.cond);
+            if (indices.length < 3) return;
+            let verts = indices.map(i => vertices[i].clone());
+            const sorted = sortVerticesOnPlane(verts, def.normal);
+            const color = def.type === 'square' ? 0x4a7db4 : 0x5fa86a; // 深蓝和深绿，适合浅色背景
+            const mesh = createMeshFromSortedVerts(sorted, color, 0.8);
+            if (!mesh) return;
+
+            let latticePoint;
+            if (def.type === 'square') {
+                switch(def.name) {
+                    case '+X': latticePoint = new THREE.Vector3(1,0,0); break;
+                    case '-X': latticePoint = new THREE.Vector3(-1,0,0); break;
+                    case '+Y': latticePoint = new THREE.Vector3(0,1,0); break;
+                    case '-Y': latticePoint = new THREE.Vector3(0,-1,0); break;
+                    case '+Z': latticePoint = new THREE.Vector3(0,0,1); break;
+                    case '-Z': latticePoint = new THREE.Vector3(0,0,-1); break;
+                    default: latticePoint = new THREE.Vector3(0,0,0);
+                }
+            } else {
+                const match = def.name.match(/\(([-+]?\d),([-+]?\d),([-+]?\d)\)/);
+                if (match) {
+                    const sx = parseInt(match[1]);
+                    const sy = parseInt(match[2]);
+                    const sz = parseInt(match[3]);
+                    latticePoint = new THREE.Vector3(sx * 0.5, sy * 0.5, sz * 0.5);
+                } else {
+                    latticePoint = new THREE.Vector3(0,0,0);
+                }
+            }
+
+            faceMeshes.push({
+                mesh: mesh,
+                latticePoint: latticePoint,
+                faceName: def.name,
+                type: def.type,
+                originalColor: color,
+                highlightColor: 0xe67e22, // 橙红色高亮
+                normalDir: def.normal
+            });
+            scene.add(mesh);
+        });
+
+        console.log(`成功构建 ${faceMeshes.length} 个面`);
+
+        // ================= 2. 体心立方结构 (深色线条，彩色原子) =================
+        const boxWire = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
+            new THREE.LineBasicMaterial({ color: 0x2c3e50, linewidth: 1 })
+        );
+        scene.add(boxWire);
+
+        const outerBox = new THREE.LineSegments(
+            new THREE.EdgesGeometry(new THREE.BoxGeometry(2, 2, 2)),
+            new THREE.LineBasicMaterial({ color: 0x7f8c8d, transparent: true, opacity: 0.4 })
+        );
+        scene.add(outerBox);
+
+        // 原子材质 (鲜艳，适合浅色背景)
+        const centerMat = new THREE.MeshStandardMaterial({ color: 0xe67e22, emissive: 0x442200, emissiveIntensity: 0.15, roughness: 0.3 });
+        const cornerMat = new THREE.MeshStandardMaterial({ color: 0x2980b9, emissive: 0x0a2a3a, roughness: 0.4 });
+        const faceMat = new THREE.MeshStandardMaterial({ color: 0x27ae60, emissive: 0x0a3a1a, roughness: 0.4 });
+
+        const centerAtom = new THREE.Mesh(new THREE.SphereGeometry(0.09, 32, 32), centerMat);
+        scene.add(centerAtom);
+        const originGlow = new THREE.PointLight(0xe67e22, 0.5, 1.8);
+        originGlow.position.set(0, 0, 0);
+        scene.add(originGlow);
+
+        for (let ix = -1; ix <= 1; ix += 2) {
+            for (let iy = -1; iy <= 1; iy += 2) {
+                for (let iz = -1; iz <= 1; iz += 2) {
+                    const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.08, 32, 32), cornerMat);
+                    sphere.position.set(ix * 0.5, iy * 0.5, iz * 0.5);
+                    scene.add(sphere);
+                }
+            }
+        }
+
+        const faceCenters = [[1,0,0], [-1,0,0], [0,1,0], [0,-1,0], [0,0,1], [0,0,-1]];
+        faceCenters.forEach(pos => {
+            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.08, 32, 32), faceMat);
+            sphere.position.set(pos[0], pos[1], pos[2]);
+            scene.add(sphere);
+        });
+
+        // CSS2D文字标签 (深色背景，白色字)
+        function makeLabel(text, pos, borderColor) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.style.color = '#ffffff';
+            div.style.fontSize = '13px';
+            div.style.fontWeight = 'bold';
+            div.style.textShadow = '1px 1px 0px #000000';
+            div.style.background = 'rgba(0,0,0,0.65)';
+            div.style.padding = '4px 10px';
+            div.style.borderRadius = '20px';
+            div.style.borderLeft = `4px solid ${borderColor}`;
+            div.style.fontFamily = 'monospace';
+            div.style.backdropFilter = 'blur(4px)';
+            div.style.pointerEvents = 'none';
+            const label = new CSS2DObject(div);
+            label.position.copy(pos);
+            scene.add(label);
+        }
+        makeLabel('● 体心 (原点)', new THREE.Vector3(0, 0, 0), '#e67e22');
+        makeLabel('◉ 角点 (最近邻)', new THREE.Vector3(0.85, 0.85, 0.85), '#2980b9');
+        makeLabel('◉ 面心 (次近邻)', new THREE.Vector3(1.25, 0, 0), '#27ae60');
+
+        // ================= 3. 交互逻辑 (支持触屏点击) =================
+        let currentLine = null;
+        let currentEndpointSphere = null;
+        let currentHighlightedMesh = null;
+
+        function resetHighlightAndLine() {
+            if (currentHighlightedMesh) {
+                const entry = faceMeshes.find(e => e.mesh === currentHighlightedMesh);
+                if (entry) {
+                    entry.mesh.material.color.setHex(entry.originalColor);
+                    entry.mesh.material.emissiveIntensity = 0;
+                    entry.mesh.material.opacity = 0.8;
+                }
+                currentHighlightedMesh = null;
+            }
+            if (currentLine) {
+                scene.remove(currentLine);
+                if (currentLine.geometry) currentLine.geometry.dispose();
+                if (currentLine.material) currentLine.material.dispose();
+                currentLine = null;
+            }
+            if (currentEndpointSphere) {
+                scene.remove(currentEndpointSphere);
+                if (currentEndpointSphere.geometry) currentEndpointSphere.geometry.dispose();
+                if (currentEndpointSphere.material) currentEndpointSphere.material.dispose();
+                currentEndpointSphere = null;
+            }
+            faceMeshes.forEach(entry => {
+                entry.mesh.material.opacity = 0.8;
+                entry.mesh.material.transparent = true;
+            });
+        }
+
+        function highlightFaceAndDrawLine(selectedMesh) {
+            resetHighlightAndLine();
+            const entry = faceMeshes.find(e => e.mesh === selectedMesh);
+            if (!entry) return;
+
+            currentHighlightedMesh = selectedMesh;
+            selectedMesh.material.color.setHex(entry.highlightColor);
+            selectedMesh.material.emissiveIntensity = 0.4;
+            selectedMesh.material.opacity = 1.0;
+
+            faceMeshes.forEach(e => {
+                if (e.mesh !== selectedMesh) {
+                    e.mesh.material.opacity = 0.3;
+                }
+            });
+
+            const start = new THREE.Vector3(0, 0, 0);
+            const end = entry.latticePoint.clone();
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([start, end]);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xe67e22, linewidth: 3 });
+            const lineObj = new THREE.Line(lineGeo, lineMat);
+            scene.add(lineObj);
+            currentLine = lineObj;
+
+            const sphereMat = new THREE.MeshStandardMaterial({ color: 0xe67e22, emissive: 0x552200, emissiveIntensity: 0.6 });
+            const endSphere = new THREE.Mesh(new THREE.SphereGeometry(0.11, 24, 24), sphereMat);
+            endSphere.position.copy(end);
+            scene.add(endSphere);
+            currentEndpointSphere = endSphere;
+
+            const typeStr = entry.type === 'square' ? '正方形面 (面心格点)' : '六边形面 (角点格点)';
+            const coord = `(${end.x.toFixed(2)}, ${end.y.toFixed(2)}, ${end.z.toFixed(2)})`;
+            document.getElementById('selected-face').innerHTML = `${typeStr}<span style="color:#ffaa66;"> 格点坐标 ${coord}</span>`;
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const mouseVec = new THREE.Vector2();
+
+        // 统一处理鼠标和触摸事件
+        function handlePick(clientX, clientY) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+            mouseVec.set(x, y);
+            raycaster.setFromCamera(mouseVec, camera);
+            const meshesList = faceMeshes.map(entry => entry.mesh);
+            const intersects = raycaster.intersectObjects(meshesList);
+            if (intersects.length > 0) {
+                highlightFaceAndDrawLine(intersects[0].object);
+            } else {
+                resetHighlightAndLine();
+                document.getElementById('selected-face').innerHTML = '无 (点击/触摸任意面)';
+                faceMeshes.forEach(entry => {
+                    entry.mesh.material.opacity = 0.8;
+                });
+            }
+        }
+
+        function onMouseClick(event) {
+            handlePick(event.clientX, event.clientY);
+        }
+
+        function onTouchStart(event) {
+            event.preventDefault(); // 防止滚动
+            if (event.touches.length === 1) {
+                const touch = event.touches[0];
+                handlePick(touch.clientX, touch.clientY);
+            }
+        }
+
+        window.addEventListener('click', onMouseClick, false);
+        window.addEventListener('touchstart', onTouchStart, { passive: false });
+
+        // ================= 4. 装饰和性能优化 =================
+        // 添加一些半透明的辅助球体或者光晕 (增强视觉效果，但不干扰)
+        const starCount = 800;
+        const starPositions = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            starPositions[i*3] = (Math.random() - 0.5) * 180;
+            starPositions[i*3+1] = (Math.random() - 0.5) * 100;
+            starPositions[i*3+2] = (Math.random() - 0.5) * 80 - 40;
+        }
+        const starGeo = new THREE.BufferGeometry();
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starMat = new THREE.PointsMaterial({ color: 0x88aadd, size: 0.06, transparent: true, opacity: 0.4 });
+        const stars = new THREE.Points(starGeo, starMat);
+        scene.add(stars);
+
+        // 边缘轮廓线 (深色，增强立体感)
+        const edgeGroup = new THREE.Group();
+        faceMeshes.forEach(entry => {
+            const edgesGeo = new THREE.EdgesGeometry(entry.mesh.geometry);
+            const edgesMat = new THREE.LineBasicMaterial({ color: 0x2c3e50, transparent: true, opacity: 0.35 });
+            const wire = new THREE.LineSegments(edgesGeo, edgesMat);
+            edgeGroup.add(wire);
+        });
+        scene.add(edgeGroup);
+
+        // 原点小光晕 Sprite (浅色背景适配)
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#e67e22';
+        ctx.beginPath();
+        ctx.arc(16, 16, 12, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = 'rgba(230,126,34,0.7)';
+        ctx.beginPath();
+        ctx.arc(16, 16, 6, 0, 2*Math.PI);
+        ctx.fill();
+        const spriteMap = new THREE.CanvasTexture(canvas);
+        const spriteMatGlow = new THREE.SpriteMaterial({ map: spriteMap, blending: THREE.AdditiveBlending });
+        const sprite = new THREE.Sprite(spriteMatGlow);
+        sprite.scale.set(0.24, 0.24, 1);
+        scene.add(sprite);
+
+        // 动画
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // 支持触屏旋转/缩放
+            stars.rotation.y += 0.0002;
+            stars.rotation.x += 0.0001;
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        console.log('教室大屏触屏优化版加载完成：浅色背景，高对比，支持触摸点击');
+    </script>
+</body>
+</html>
