@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>14种布拉伐格子 3D 可视化</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f8f8f8; overflow: hidden; }
+        #canvas-container { width: 100vw; height: 100vh; }
+        
+        .info-panel {
+            position: fixed; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 320px;
+            z-index: 100;
+        }
+        .info-panel h4 { color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .info-panel p { color: #666; font-size: 14px; line-height: 1.6; margin: 5px 0; }
+        
+        .lattice-selector {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1); max-width: 300px;
+            z-index: 100;
+        }
+        .lattice-selector h4 { color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .lattice-btn {
+            display: block; width: 100%; padding: 8px 10px; margin: 4px 0;
+            border: 1px solid #ddd; border-radius: 4px; background: #fff;
+            cursor: pointer; text-align: left; font-size: 13px;
+            transition: all 0.2s;
+        }
+        .lattice-btn:hover { background: #f0f7ff; border-color: #3366ff; }
+        .lattice-btn.active {
+            background: #3366ff; color: white; border-color: #3366ff;
+        }
+        
+        .control-btn {
+            position: fixed; padding: 10px 20px; border-radius: 8px;
+            cursor: pointer; font-size: 14px; border: none; color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100;
+            transition: background 0.3s;
+        }
+        .control-btn:hover { filter: brightness(0.9); }
+        #resetViewBtn { bottom: 20px; right: 20px; background: #3366ff; }
+        #toggleAtomsBtn { bottom: 70px; right: 20px; background: #ff6633; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="info-panel">
+        <h4>14种布拉伐格子 3D 可视化</h4>
+        <p>📐 晶格常数：统一缩放便于对比</p>
+        <p>🔢 布拉伐格子分类：</p>
+        <p>• 简单(P)：仅顶点有原子</p>
+        <p>• 体心(I)：顶点+体心有原子</p>
+        <p>• 面心(F)：顶点+所有面心有原子</p>
+        <p>• 底心(C)：顶点+上下底面（Y=0和Y=c）中心有原子</p>
+        <p>🖱️ 操作：左键旋转 | 滚轮缩放 | 右键平移</p>
+        <p>🔘 重置视图：恢复初始视角</p>
+        <p>🔘 显示/隐藏原子：切换原子显示状态</p>
+        <p>🎨 颜色：框架=蓝色 | 原子=深灰/紫色</p>
+    </div>
+    
+    <div class="lattice-selector">
+        <h4>选择布拉伐格子</h4>
+        <button class="lattice-btn active" data-type="simple-cubic">1. 简单立方</button>
+        <button class="lattice-btn" data-type="body-centered-cubic">2. 体心立方</button>
+        <button class="lattice-btn" data-type="face-centered-cubic">3. 面心立方</button>
+        <button class="lattice-btn" data-type="simple-tetragonal">4. 简单四方</button>
+        <button class="lattice-btn" data-type="body-centered-tetragonal">5. 体心四方</button>
+        <button class="lattice-btn" data-type="simple-orthorhombic">6. 简单正交</button>
+        <button class="lattice-btn" data-type="body-centered-orthorhombic">7. 体心正交</button>
+        <button class="lattice-btn" data-type="face-centered-orthorhombic">8. 面心正交</button>
+        <button class="lattice-btn" data-type="base-centered-orthorhombic">9. 底心正交</button>
+        <button class="lattice-btn" data-type="simple-monoclinic">10. 简单单斜</button>
+        <button class="lattice-btn" data-type="base-centered-monoclinic">11. 底心单斜</button>
+        <button class="lattice-btn" data-type="simple-triclinic">12. 简单三斜</button>
+        <button class="lattice-btn" data-type="simple-hexagonal">13. 六方</button>
+        <button class="lattice-btn" data-type="rhombohedral">14. 三方</button>
+    </div>
+    
+    <button class="control-btn" id="resetViewBtn">重置视图</button>
+    <button class="control-btn" id="toggleAtomsBtn">隐藏原子</button>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ========== 1. 基础初始化 ==========
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+        camera.position.set(5, 5, 7);
+        camera.lookAt(0, 2, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0xf8f8f8);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.target.set(0, 2, 0);
+
+        scene.add(new THREE.AxesHelper(4));
+        scene.add(new THREE.GridHelper(10, 20, 0xe0e0e0, 0xf0f0f0));
+
+        // ========== 2. 材质与几何体 ==========
+        const materials = {
+            frame: new THREE.LineBasicMaterial({ color: 0x3366ff, linewidth: 2 }),
+            vertexAtom: new THREE.MeshLambertMaterial({ color: 0x222222 }),
+            centerAtom: new THREE.MeshLambertMaterial({ color: 0x993399 }),
+            faceAtom: new THREE.MeshLambertMaterial({ color: 0x444444 })
+        };
+
+        const atomGeometry = new THREE.SphereGeometry(0.08, 24, 24);
+        const centerAtomGeometry = new THREE.SphereGeometry(0.1, 24, 24);
+
+        // ========== 3. 14种布拉伐格子定义（修正单斜晶系）==========
+        // 单斜晶系核心特征：底面（X-Z）正交，竖直棱（Y轴）与底面斜交（β≠90°）
+        const latticeDefinitions = {
+            // 立方晶系 (a=b=c=2)
+            'simple-cubic': {
+                name: '简单立方 (P)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,2], [0,2,0],
+                    [2,0,2], [2,2,0], [0,2,2], [2,2,2]
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: []
+            },
+            'body-centered-cubic': {
+                name: '体心立方 (I)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,2], [0,2,0],
+                    [2,0,2], [2,2,0], [0,2,2], [2,2,2]
+                ],
+                bodyCenter: [[1,1,1]],
+                faceCenters: [],
+                baseCenters: []
+            },
+            'face-centered-cubic': {
+                name: '面心立方 (F)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,2], [0,2,0],
+                    [2,0,2], [2,2,0], [0,2,2], [2,2,2]
+                ],
+                bodyCenter: [],
+                faceCenters: [
+                    [1,0,1], [1,2,1], [0,1,1], [2,1,1], [1,1,0], [1,1,2]
+                ],
+                baseCenters: []
+            },
+            
+            // 四方晶系 (a=b=2, c=3)
+            'simple-tetragonal': {
+                name: '简单四方 (P)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,2], [0,3,0],
+                    [2,0,2], [2,3,0], [0,3,2], [2,3,2]
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: []
+            },
+            'body-centered-tetragonal': {
+                name: '体心四方 (I)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,2], [0,3,0],
+                    [2,0,2], [2,3,0], [0,3,2], [2,3,2]
+                ],
+                bodyCenter: [[1,1.5,1]],
+                faceCenters: [],
+                baseCenters: []
+            },
+            
+            // 正交晶系 (a=2, b=3, c=4)
+            'simple-orthorhombic': {
+                name: '简单正交 (P)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,3], [0,4,0],
+                    [2,0,3], [2,4,0], [0,4,3], [2,4,3]
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: []
+            },
+            'body-centered-orthorhombic': {
+                name: '体心正交 (I)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,3], [0,4,0],
+                    [2,0,3], [2,4,0], [0,4,3], [2,4,3]
+                ],
+                bodyCenter: [[1,2,1.5]],
+                faceCenters: [],
+                baseCenters: []
+            },
+            'face-centered-orthorhombic': {
+                name: '面心正交 (F)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,3], [0,4,0],
+                    [2,0,3], [2,4,0], [0,4,3], [2,4,3]
+                ],
+                bodyCenter: [],
+                faceCenters: [
+                    [1,0,1.5], [1,4,1.5], [0,2,1.5], [2,2,1.5], [1,2,0], [1,2,3]
+                ],
+                baseCenters: []
+            },
+            'base-centered-orthorhombic': {
+                name: '底心正交 (C)',
+                vertices: [
+                    [0,0,0], [2,0,0], [0,0,3], [0,4,0],
+                    [2,0,3], [2,4,0], [0,4,3], [2,4,3]
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: [[1,0,1.5], [1,4,1.5]]  // 上下底面中心
+            },
+            
+            // 单斜晶系（核心修正：底面X-Z正交，竖直棱斜交）
+            'simple-monoclinic': {
+                name: '简单单斜 (P)',
+                vertices: [
+                    [0,0,0],        // 原点 (0,0,0)
+                    [2,0,0],        // a轴（X轴，底面）
+                    [0,0,2],        // b轴（Z轴，底面，与a轴垂直）
+                    [1,4,1],        // c轴（斜向，与底面不垂直）
+                    [2,0,2],        // a+b（底面右上角）
+                    [3,4,1],        // a+c（斜顶1）
+                    [1,4,3],        // b+c（斜顶2）
+                    [3,4,3]         // a+b+c（斜顶3）
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: []
+            },
+            'base-centered-monoclinic': {
+                name: '底心单斜 (C)',
+                vertices: [
+                    [0,0,0],        // 原点 (0,0,0)
+                    [2,0,0],        // a轴（X轴，底面）
+                    [0,0,2],        // b轴（Z轴，底面，与a轴垂直）
+                    [1,4,1],        // c轴（斜向，与底面不垂直）
+                    [2,0,2],        // a+b（底面右上角）
+                    [3,4,1],        // a+c（斜顶1）
+                    [1,4,3],        // b+c（斜顶2）
+                    [3,4,3]         // a+b+c（斜顶3）
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: [
+                    [1,0,1],        // 下底面（Y=0）中心（水平）
+                    [2,4,2]         // 上顶面（斜顶）中心
+                ]
+            },
+            
+            // 三斜晶系 (任意向量)
+            'simple-triclinic': {
+                name: '简单三斜 (P)',
+                vertices: [
+                    [0,0,0],
+                    [2.2,0.3,0.1],
+                    [0.8,1.9,0.4],
+                    [1.1,2.3,3.2],
+                    [3.0,2.2,0.5],
+                    [3.3,2.6,3.3],
+                    [1.9,4.2,3.6],
+                    [4.1,4.5,3.7]
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: []
+            },
+            
+            // 六方晶系 (a=2, c=3, 底面菱形)
+            'simple-hexagonal': {
+                name: '简单六方 (P)',
+                vertices: [
+                    [0,0,0],
+                    [2,0,0],
+                    [-1,0,1.732],
+                    [1,0,1.732],
+                    [0,3,0],
+                    [2,3,0],
+                    [-1,3,1.732],
+                    [1,3,1.732]
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: []
+            },
+            
+            // 菱方晶系 (三角，a=2, α≈60°)
+            'rhombohedral': {
+                name: '菱方 (R)',
+                vertices: [
+                    [0,0,0],
+                    [2,0,0],
+                    [1,0,1.732],
+                    [1,1.633,0.577],
+                    [3,0,1.732],
+                    [3,1.633,0.577],
+                    [2,1.633,2.309],
+                    [4,1.633,2.309]
+                ],
+                bodyCenter: [],
+                faceCenters: [],
+                baseCenters: []
+            }
+        };
+
+        // ========== 4. 场景元素管理 ==========
+        let currentLattice = null;
+        const sceneObjects = {
+            frame: null,
+            vertexAtoms: [],
+            centerAtoms: [],
+            faceAtoms: [],
+            baseAtoms: []
+        };
+
+        function clearLattice() {
+            if (sceneObjects.frame) {
+                scene.remove(sceneObjects.frame);
+                sceneObjects.frame.geometry?.dispose();
+                sceneObjects.frame = null;
+            }
+            [sceneObjects.vertexAtoms, sceneObjects.centerAtoms, sceneObjects.faceAtoms, sceneObjects.baseAtoms].forEach(atomArray => {
+                atomArray.forEach(atom => {
+                    scene.remove(atom);
+                    atom.geometry.dispose();
+                });
+                atomArray.length = 0;
+            });
+        }
+
+        function createLatticeFrame(def) {
+            const points = [];
+            let edges;
+
+            // 根据晶系选择正确的边列表
+            if (def.name.includes('六方')) {
+                // 六方专用边列表
+                edges = [
+                    [0,1], [0,2], [1,3], [2,3], // 底面
+                    [4,5], [5,7], [7,6], [6,4], // 顶面
+                    [0,4], [1,5], [2,6], [3,7]  // 竖棱
+                ];
+            } else {
+                // 通用边列表（适用于所有非六方晶系）
+                edges = [
+                    [0,1], [0,2], [0,3],
+                    [1,4], [1,5],
+                    [2,4], [2,6],
+                    [3,5], [3,6],
+                    [4,7],
+                    [5,7],
+                    [6,7]
+                ];
+            }
+
+            edges.forEach(pair => {
+                points.push(new THREE.Vector3(...def.vertices[pair[0]]));
+                points.push(new THREE.Vector3(...def.vertices[pair[1]]));
+            });
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const frame = new THREE.LineSegments(geometry, materials.frame);
+            scene.add(frame);
+            sceneObjects.frame = frame;
+        }
+
+        function createAtoms(def) {
+            def.vertices.forEach(pos => {
+                const atom = new THREE.Mesh(atomGeometry, materials.vertexAtom);
+                atom.position.set(...pos);
+                scene.add(atom);
+                sceneObjects.vertexAtoms.push(atom);
+            });
+            def.bodyCenter.forEach(pos => {
+                const atom = new THREE.Mesh(centerAtomGeometry, materials.centerAtom);
+                atom.position.set(...pos);
+                scene.add(atom);
+                sceneObjects.centerAtoms.push(atom);
+            });
+            def.faceCenters.forEach(pos => {
+                const atom = new THREE.Mesh(atomGeometry, materials.faceAtom);
+                atom.position.set(...pos);
+                scene.add(atom);
+                sceneObjects.faceAtoms.push(atom);
+            });
+            def.baseCenters.forEach(pos => {
+                const atom = new THREE.Mesh(atomGeometry, materials.faceAtom);
+                atom.position.set(...pos);
+                scene.add(atom);
+                sceneObjects.baseAtoms.push(atom);
+            });
+        }
+
+        function loadLattice(type) {
+            clearLattice();
+            const def = latticeDefinitions[type];
+            currentLattice = type;
+            createLatticeFrame(def);
+            createAtoms(def);
+            document.querySelectorAll('.lattice-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.type === type);
+            });
+            console.log(`✅ 已加载：${def.name}`);
+        }
+
+        // ========== 5. 交互控制 ==========
+        loadLattice('simple-cubic');
+
+        document.querySelectorAll('.lattice-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                loadLattice(btn.dataset.type);
+            });
+        });
+
+        document.getElementById('resetViewBtn').addEventListener('click', () => {
+            camera.position.set(5, 5, 7);
+            controls.target.set(0, 2, 0);
+            controls.reset();
+        });
+
+        const toggleAtomsBtn = document.getElementById('toggleAtomsBtn');
+        let areAtomsHidden = false;
+        toggleAtomsBtn.addEventListener('click', () => {
+            areAtomsHidden = !areAtomsHidden;
+            [sceneObjects.vertexAtoms, sceneObjects.centerAtoms, sceneObjects.faceAtoms, sceneObjects.baseAtoms].forEach(atomArray => {
+                atomArray.forEach(atom => { atom.visible = !areAtomsHidden; });
+            });
+            toggleAtomsBtn.textContent = areAtomsHidden ? "显示原子" : "隐藏原子";
+        });
+
+        // ========== 6. 光源与自适应 ==========
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        pointLight.position.set(5, 10, 7);
+        scene.add(pointLight);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
