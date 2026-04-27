@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一维单原子链 - 格波演示</title>
+    <style>
+        :root {
+            --bg: #f5f0eb;
+            --card-bg: #ffffff;
+            --text: #2c2416;
+            --text-secondary: #6b5e4a;
+            --accent: #c0392b;
+            --accent2: #2980b9;
+            --slider-track: #d9cbb8;
+            --slider-fill: #c0392b;
+            --border: #e0d5c5;
+            --shadow: 0 2px 16px rgba(60, 40, 20, 0.08);
+            --atom-heavy: #3a6b8c;
+            --atom-light: #c75b3a;
+            --atom-glow: rgba(200, 90, 50, 0.35);
+            --spring: #b8a590;
+            --grid-line: #e8e0d5;
+            --dispersion-curve: #2c5f7c;
+            --dispersion-point: #c0392b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .container {
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 28px 30px 24px;
+            max-width: 960px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+        .header .badge {
+            font-size: 0.78rem;
+            background: #fdf6f0;
+            color: #8b6914;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+            border: 1px solid #f0e0c8;
+            white-space: nowrap;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            background: #fdfdfc;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+            aspect-ratio: 900 / 380;
+            min-height: 320px;
+            cursor: default;
+        }
+        canvas#mainCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            align-items: flex-start;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1 1 180px;
+            min-width: 150px;
+        }
+        .control-group label {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.01em;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .control-group label .icon {
+            font-size: 1rem;
+        }
+        .control-group input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 7px;
+            border-radius: 10px;
+            background: var(--slider-track);
+            outline: none;
+            cursor: pointer;
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2.5px solid var(--accent);
+            cursor: pointer;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12);
+            transition: transform 0.1s;
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+        }
+        .value-display {
+            font-size: 0.78rem;
+            color: var(--text);
+            font-weight: 600;
+            background: #faf8f5;
+            padding: 2px 8px;
+            border-radius: 6px;
+            display: inline-block;
+            align-self: flex-start;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn {
+            padding: 8px 16px;
+            border-radius: 22px;
+            font-size: 0.84rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: all 0.18s;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+            font-family: inherit;
+        }
+        .btn-play {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            min-width: 72px;
+            text-align: center;
+        }
+        .btn-play:hover {
+            background: #a93226;
+            border-color: #a93226;
+        }
+        .btn-play.paused {
+            background: #fff;
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        .btn-preset {
+            background: #fff;
+            color: var(--text);
+            border-color: #d5c8b5;
+        }
+        .btn-preset:hover {
+            background: #faf6f0;
+            border-color: #c0a880;
+        }
+        .btn-preset.active {
+            background: #fef5f0;
+            border-color: var(--accent);
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .info-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            align-items: center;
+        }
+        .info-item {
+            background: #faf8f5;
+            padding: 6px 12px;
+            border-radius: 18px;
+            white-space: nowrap;
+            border: 1px solid #ece5d8;
+        }
+        .info-item strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        @media (max-width: 700px) {
+            .container {
+                padding: 16px 12px;
+                border-radius: 14px;
+                gap: 12px;
+            }
+            .canvas-wrapper {
+                aspect-ratio: 4/3;
+                min-height: 240px;
+            }
+            .header h1 {
+                font-size: 1.15rem;
+            }
+            .controls {
+                gap: 10px;
+            }
+            .control-group {
+                flex: 1 1 120px;
+                min-width: 100px;
+            }
+            .btn {
+                padding: 6px 12px;
+                font-size: 0.76rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>🔬 一维单原子链 · 格波演示</h1>
+            <span class="badge">晶格动力学</span>
+        </div>
+
+        <!-- 主画布 -->
+        <div class="canvas-wrapper">
+            <canvas id="mainCanvas"></canvas>
+        </div>
+
+        <!-- 信息栏 -->
+        <div class="info-bar" id="infoBar">
+            <span class="info-item">波矢 <strong id="infoQ">π/4</strong></span>
+            <span class="info-item">角频率 ω = <strong id="infoOmega">0.765</strong></span>
+            <span class="info-item">波长 λ = <strong id="infoLambda">8.0</strong> a</span>
+            <span class="info-item">群速度 v<sub>g</sub> = <strong id="infoVg">0.924</strong></span>
+            <span class="info-item">模式：<strong id="infoMode">行波</strong></span>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="controls">
+            <div class="control-group">
+                <label><span class="icon">📏</span> 波矢 q（相邻相位差 Δφ）</label>
+                <input type="range" id="qSlider" min="0" max="3.1416" step="0.005" value="0.7854">
+                <span class="value-display" id="qValue">π/4 (45°)</span>
+            </div>
+            <div class="control-group">
+                <label><span class="icon">📐</span> 振幅 A</label>
+                <input type="range" id="ampSlider" min="10" max="80" step="1" value="50">
+                <span class="value-display" id="ampValue">50 px</span>
+            </div>
+            <div class="control-group">
+                <label><span class="icon">⏱️</span> 动画速度</label>
+                <input type="range" id="speedSlider" min="0.2" max="5" step="0.1" value="2.5">
+                <span class="value-display" id="speedValue">2.5×</span>
+            </div>
+        </div>
+
+        <!-- 按钮行 -->
+        <div class="btn-row">
+            <button class="btn btn-play" id="btnPlay" title="空格键切换">▶ 播放</button>
+            <button class="btn btn-preset active" data-q="0.7854">一般行波 q=π/4</button>
+            <button class="btn btn-preset" data-q="0.05">长波极限 q≈0</button>
+            <button class="btn btn-preset" data-q="3.1416">短波极限 q=π</button>
+            <button class="btn btn-preset" data-q="1.5708">q=π/2</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ==================== DOM 元素 ====================
+            const canvas = document.getElementById('mainCanvas');
+            const ctx = canvas.getContext('2d');
+
+            const qSlider = document.getElementById('qSlider');
+            const ampSlider = document.getElementById('ampSlider');
+            const speedSlider = document.getElementById('speedSlider');
+            const qValueDisplay = document.getElementById('qValue');
+            const ampValueDisplay = document.getElementById('ampValue');
+            const speedValueDisplay = document.getElementById('speedValue');
+            const btnPlay = document.getElementById('btnPlay');
+            const presetButtons = document.querySelectorAll('.btn-preset');
+
+            const infoQ = document.getElementById('infoQ');
+            const infoOmega = document.getElementById('infoOmega');
+            const infoLambda = document.getElementById('infoLambda');
+            const infoVg = document.getElementById('infoVg');
+            const infoMode = document.getElementById('infoMode');
+
+            // ==================== 物理参数 ====================
+            const N = 25; // 原子数
+            const a_px = 32; // 晶格常数（像素间距）
+            const beta_over_m = 1; // β/m = 1（特征频率单位）
+
+            let phaseStep = parseFloat(qSlider.value); // 相邻原子相位差 Δφ = q*a
+            let amplitude = parseFloat(ampSlider.value); // 振幅（像素）
+            let speedFactor = parseFloat(speedSlider.value); // 动画速度因子
+            let isPlaying = true;
+            let animTime = 0; // 累计动画时间
+            let lastFrameTime = null;
+
+            // ==================== Canvas 设置 ====================
+            const DPR = Math.min(window.devicePixelRatio || 1, 1.5); // 限制像素比以保证性能
+            let canvasW, canvasH;
+
+            function resizeCanvas() {
+                const wrapper = canvas.parentElement;
+                const rect = wrapper.getBoundingClientRect();
+                canvasW = rect.width;
+                canvasH = rect.height;
+                canvas.width = canvasW * DPR;
+                canvas.height = canvasH * DPR;
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.scale(DPR, DPR);
+            }
+            resizeCanvas();
+            window.addEventListener('resize', () => {
+                resizeCanvas();
+            });
+
+            // ==================== 色散关系函数 ====================
+            function dispersionOmega(dphi) {
+                // ω = 2√(β/m) |sin(Δφ/2)|，对于 Δφ ∈ [0,π]，sin ≥ 0
+                return 2 * Math.sqrt(beta_over_m) * Math.abs(Math.sin(dphi / 2));
+            }
+
+            function groupVelocity(dphi) {
+                // v_g = dω/d(Δφ) = cos(Δφ/2)，对于 β/m=1, a=1
+                return Math.cos(dphi / 2);
+            }
+
+            // ==================== 更新显示 ====================
+            function updateDisplays() {
+                const omega = dispersionOmega(phaseStep);
+                const vg = groupVelocity(phaseStep);
+                const lambda = (phaseStep < 0.001) ? Infinity : (2 * Math.PI / phaseStep);
+
+                // 波矢显示
+                const frac = phaseStep / Math.PI;
+                let qStr;
+                if (phaseStep < 0.005) qStr = '≈ 0';
+                else if (Math.abs(phaseStep - Math.PI) < 0.005) qStr = 'π';
+                else if (Math.abs(phaseStep - Math.PI / 4) < 0.005) qStr = 'π/4';
+                else if (Math.abs(phaseStep - Math.PI / 2) < 0.005) qStr = 'π/2';
+                else if (Math.abs(phaseStep - 3 * Math.PI / 4) < 0.005) qStr = '3π/4';
+                else qStr = (frac * Math.PI).toFixed(2);
+
+                qValueDisplay.textContent = `${qStr} (${(phaseStep * 180 / Math.PI).toFixed(0)}°)`;
+                infoQ.textContent = qStr;
+                infoOmega.textContent = omega.toFixed(3);
+                infoLambda.textContent = (lambda === Infinity) ? '∞' : lambda.toFixed(1);
+                infoVg.textContent = vg.toFixed(3);
+
+                if (phaseStep < 0.01) {
+                    infoMode.textContent = '平移模 (ω≈0)';
+                } else if (phaseStep > Math.PI - 0.01) {
+                    infoMode.textContent = '驻波 (v_g≈0)';
+                } else {
+                    infoMode.textContent = '行波';
+                }
+
+                ampValueDisplay.textContent = `${Math.round(amplitude)} px`;
+                speedValueDisplay.textContent = `${speedFactor.toFixed(1)}×`;
+            }
+
+            // ==================== 绘制函数 ====================
+            function drawGridAndBackground() {
+                // 背景
+                ctx.fillStyle = '#fdfdfc';
+                ctx.fillRect(0, 0, canvasW, canvasH);
+
+                // 平衡位置虚线
+                const centerY = canvasH * 0.5;
+                const marginX = 35;
+                const chainStartX = marginX;
+                const chainEndX = chainStartX + (N - 1) * a_px;
+
+                ctx.strokeStyle = '#e0d9ce';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([8, 6]);
+                ctx.beginPath();
+                ctx.moveTo(chainStartX - 18, centerY);
+                ctx.lineTo(chainEndX + 18, centerY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 标签
+                ctx.fillStyle = '#c5b99a';
+                ctx.font = `${11}px "PingFang SC","Microsoft YaHei",sans-serif`;
+                ctx.textAlign = 'right';
+                ctx.fillText('平衡位置', chainStartX - 22, centerY + 4);
+            }
+
+            function drawAtoms(t) {
+                const centerY = canvasH * 0.5;
+                const marginX = 35;
+                const chainStartX = marginX;
+                const omega = dispersionOmega(phaseStep);
+
+                // 计算所有原子的位移
+                const displacements = [];
+                for (let n = 0; n < N; n++) {
+                    const phase = phaseStep * n - omega * t;
+                    const y = amplitude * Math.sin(phase);
+                    displacements.push(y);
+                }
+
+                // --- 绘制连接线（弹簧/键） ---
+                ctx.strokeStyle = '#c4b59a';
+                ctx.lineWidth = 2.2;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                for (let n = 0; n < N; n++) {
+                    const x = chainStartX + n * a_px;
+                    const y = centerY + displacements[n];
+                    if (n === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+
+                // --- 绘制半透明包络参考波（连续正弦） ---
+                ctx.strokeStyle = 'rgba(180,140,100,0.30)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 6]);
+                ctx.beginPath();
+                const firstX = chainStartX;
+                const lastX = chainStartX + (N - 1) * a_px;
+                const steps = 200;
+                for (let i = 0; i <= steps; i++) {
+                    const frac = i / steps;
+                    const x = firstX + frac * (lastX - firstX);
+                    const n_continuous = frac * (N - 1);
+                    const phase = phaseStep * n_continuous - omega * t;
+                    const y = centerY + amplitude * Math.sin(phase);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // --- 绘制原子 ---
+                for (let n = 0; n < N; n++) {
+                    const x = chainStartX + n * a_px;
+                    const y = centerY + displacements[n];
+                    const radius = 7.5;
+
+                    // 阴影
+                    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+                    ctx.beginPath();
+                    ctx.arc(x, y + 2, radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 主体渐变
+                    const grad = ctx.createRadialGradient(x - 2, y - 3, radius * 0.15, x, y, radius);
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(0.35, '#e8c9a0');
+                    grad.addColorStop(0.7, '#b8703e');
+                    grad.addColorStop(1, '#6b3a20');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // 高光
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.beginPath();
+                    ctx.arc(x - 2.5, y - 3.5, radius * 0.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                return { chainStartX, chainEndX: chainStartX + (N - 1) * a_px, centerY, displacements, omega };
+            }
+
+            function drawDispersionInset(chainData) {
+                // 色散关系小图 - 放在右下角
+                const insetW = 185;
+                const insetH = 140;
+                const insetX = canvasW - insetW - 18;
+                const insetY = canvasH - insetH - 14;
+
+                // 半透明背景
+                ctx.fillStyle = 'rgba(255,255,255,0.88)';
+                ctx.strokeStyle = '#d5c8b5';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.roundRect(insetX, insetY, insetW, insetH, 10);
+                ctx.fill();
+                ctx.stroke();
+
+                // 标题
+                ctx.fillStyle = '#5c4a30';
+                ctx.font = `bold ${10.5}px "PingFang SC","Microsoft YaHei",sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('色散关系 ω(q)', insetX + insetW / 2, insetY + 17);
+
+                // 坐标区域
+                const plotX = insetX + 32;
+                const plotY = insetY + 26;
+                const plotW = insetW - 48;
+                const plotH = insetH - 42;
+                const plotRight = plotX + plotW;
+                const plotBottom = plotY + plotH;
+
+                // 坐标轴
+                ctx.strokeStyle = '#9e8d75';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(plotX, plotY);
+                ctx.lineTo(plotX, plotBottom);
+                ctx.lineTo(plotRight, plotBottom);
+                ctx.stroke();
+
+                // 轴标签
+                ctx.fillStyle = '#7a6b55';
+                ctx.font = `${9.5}px "PingFang SC","Microsoft YaHei",sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.fillText('q (Δφ)', plotX + plotW / 2, plotBottom + 14);
+                ctx.save();
+                ctx.translate(plotX - 16, plotY + plotH / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('ω', 0, 0);
+                ctx.restore();
+
+                // 布里渊区边界标记
+                ctx.setLineDash([3, 4]);
+                ctx.strokeStyle = '#c5b8a0';
+                ctx.lineWidth = 0.8;
+                const qPiX = plotX + plotW; // q=π 在右边界
+                ctx.beginPath();
+                ctx.moveTo(qPiX, plotY);
+                ctx.lineTo(qPiX, plotBottom);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#a09078';
+                ctx.textAlign = 'center';
+                ctx.fillText('π', qPiX, plotBottom + 14);
+
+                // q=0标记
+                ctx.fillText('0', plotX, plotBottom + 14);
+
+                // ω最大值标记
+                const omegaMaxY = plotY;
+                ctx.fillStyle = '#a09078';
+                ctx.textAlign = 'right';
+                ctx.fillText('2', plotX - 5, omegaMaxY + 4);
+                ctx.fillText('0', plotX - 5, plotBottom + 1);
+
+                // 绘制色散关系曲线 ω(q) = 2|sin(q/2)|
+                ctx.strokeStyle = '#2c5f7c';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                const curveSteps = 80;
+                for (let i = 0; i <= curveSteps; i++) {
+                    const frac = i / curveSteps;
+                    const qVal = frac * Math.PI;
+                    const omegaVal = dispersionOmega(qVal);
+                    const cx = plotX + frac * plotW;
+                    const cy = plotBottom - (omegaVal / 2) * plotH;
+                    if (i === 0) ctx.moveTo(cx, cy);
+                    else ctx.lineTo(cx, cy);
+                }
+                ctx.stroke();
+
+                // 标记当前点
+                const currentFrac = phaseStep / Math.PI;
+                const currentOmega = dispersionOmega(phaseStep);
+                const pointX = plotX + currentFrac * plotW;
+                const pointY = plotBottom - (currentOmega / 2) * plotH;
+
+                // 虚线到轴
+                ctx.setLineDash([2, 3]);
+                ctx.strokeStyle = 'rgba(192,57,43,0.5)';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(pointX, pointY);
+                ctx.lineTo(pointX, plotBottom);
+                ctx.moveTo(pointX, pointY);
+                ctx.lineTo(plotX, pointY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 当前点光晕
+                ctx.fillStyle = 'rgba(220,120,80,0.35)';
+                ctx.beginPath();
+                ctx.arc(pointX, pointY, 6, 0, Math.PI * 2);
+                ctx.fill();
+                // 当前点
+                ctx.fillStyle = '#c0392b';
+                ctx.beginPath();
+                ctx.arc(pointX, pointY, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // 群速度切线（短线段）
+                const vg = groupVelocity(phaseStep);
+                const tangentLen = 22;
+                const tangentDx = tangentLen / Math.sqrt(1 + vg * vg);
+                const tangentDy = vg * tangentDx * (plotH / plotW) * (2 / Math.PI); // 缩放调整
+                ctx.strokeStyle = 'rgba(46,139,87,0.7)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(pointX - tangentDx * 0.5, pointY - tangentDy * 0.5);
+                ctx.lineTo(pointX + tangentDx * 0.5, pointY + tangentDy * 0.5);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 图例
+                ctx.fillStyle = '#2c5f7c';
+                ctx.font = `${9}px "PingFang SC","Microsoft YaHei",sans-serif`;
+                ctx.textAlign = 'left';
+                ctx.fillText('— ω(q)', insetX + 10, insetY + insetH - 8);
+                ctx.fillStyle = '#c0392b';
+                ctx.fillText('● 当前', insetX + 70, insetY + insetH - 8);
+            }
+
+            function drawAll(t) {
+                ctx.clearRect(0, 0, canvasW, canvasH);
+                drawGridAndBackground();
+                const chainData = drawAtoms(t);
+                drawDispersionInset(chainData);
+            }
+
+            // ==================== 动画循环 ====================
+            function animate(timestamp) {
+                if (!lastFrameTime) lastFrameTime = timestamp;
+                let dt = (timestamp - lastFrameTime) / 1000; // 秒
+                if (dt > 0.1) dt = 0.1; // 防止大帧跳跃
+                if (dt <= 0) dt = 0.016;
+                lastFrameTime = timestamp;
+
+                if (isPlaying) {
+                    animTime += dt * speedFactor;
+                }
+
+                drawAll(animTime);
+                updateDisplays();
+                requestAnimationFrame(animate);
+            }
+
+            // ==================== 事件处理 ====================
+            qSlider.addEventListener('input', () => {
+                phaseStep = parseFloat(qSlider.value);
+                updateDisplays();
+                // 更新预设按钮状态
+                updatePresetActive();
+            });
+
+            ampSlider.addEventListener('input', () => {
+                amplitude = parseFloat(ampSlider.value);
+                updateDisplays();
+            });
+
+            speedSlider.addEventListener('input', () => {
+                speedFactor = parseFloat(speedSlider.value);
+                updateDisplays();
+            });
+
+            btnPlay.addEventListener('click', togglePlay);
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'Space' && e.target === document.body) {
+                    e.preventDefault();
+                    togglePlay();
+                }
+            });
+
+            function togglePlay() {
+                isPlaying = !isPlaying;
+                if (isPlaying) {
+                    btnPlay.textContent = '▶ 播放';
+                    btnPlay.classList.remove('paused');
+                    lastFrameTime = null;
+                } else {
+                    btnPlay.textContent = '⏸ 暂停';
+                    btnPlay.classList.add('paused');
+                }
+            }
+
+            presetButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const qVal = parseFloat(btn.dataset.q);
+                    phaseStep = qVal;
+                    qSlider.value = qVal;
+                    updateDisplays();
+                    updatePresetActive();
+                });
+            });
+
+            function updatePresetActive() {
+                presetButtons.forEach(btn => {
+                    const qVal = parseFloat(btn.dataset.q);
+                    if (Math.abs(phaseStep - qVal) < 0.008) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+            }
+
+            // ==================== 初始化 ====================
+            function init() {
+                phaseStep = parseFloat(qSlider.value);
+                amplitude = parseFloat(ampSlider.value);
+                speedFactor = parseFloat(speedSlider.value);
+                updateDisplays();
+                updatePresetActive();
+                drawAll(0);
+                lastFrameTime = null;
+                requestAnimationFrame(animate);
+            }
+
+            // 处理 roundRect 兼容性
+            if (!ctx.roundRect) {
+                ctx.roundRect = function(x, y, w, h, r) {
+                    if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+                    ctx.beginPath();
+                    ctx.moveTo(x + r.tl, y);
+                    ctx.lineTo(x + w - r.tr, y);
+                    ctx.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+                    ctx.lineTo(x + w, y + h - r.br);
+                    ctx.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+                    ctx.lineTo(x + r.bl, y + h);
+                    ctx.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+                    ctx.lineTo(x, y + r.tl);
+                    ctx.quadraticCurveTo(x, y, x + r.tl, y);
+                    ctx.closePath();
+                };
+            }
+
+            init();
+            console.log('🔬 一维单原子链格波演示已就绪');
+            console.log('  - 空格键：播放/暂停');
+            console.log('  - 波矢 q 范围：[0, π]（第一布里渊区）');
+            console.log('  - 色散关系：ω = 2|sin(qa/2)|');
+            console.log('  - 原子数：' + N + ' 个');
+        })();
+    </script>
+</body>
+</html>
