@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>倒格矢与晶面关系 - 交互式3D教学</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Noto Sans', system-ui, 'Microsoft YaHei', sans-serif;
+        }
+
+        .container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            flex-direction: row; /* PC端默认左右布局 */
+        }
+
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background-color: #f5f7fc;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+
+        .info-panel {
+            flex: 1;
+            background: #ffffff;
+            border-left: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            box-shadow: -2px 0 12px rgba(0,0,0,0.05);
+            z-index: 2;
+        }
+
+        .panel-header {
+            background: #1e3a5f;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-bottom: 3px solid #ffaa33;
+            flex-shrink: 0;
+        }
+
+        .panel-header h2 {
+            margin: 0 0 0.25rem 0;
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+
+        .panel-header p {
+            margin: 0;
+            opacity: 0.85;
+            font-size: 0.85rem;
+        }
+
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.2rem;
+            padding-bottom: 2rem;
+            background: #fefefe;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            min-height: 0;
+            scroll-behavior: smooth;
+        }
+        
+        .scrollable-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollable-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background: #b0b7c4;
+            border-radius: 10px;
+        }
+
+        .step-section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #1e3a5f;
+            border-left: 5px solid #ffaa33;
+            padding-left: 0.8rem;
+            margin: 0.2rem 0 0.4rem 0;
+            background: none;
+        }
+        .step-description {
+            background: #eef2f7;
+            padding: 0.6rem 1rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            color: #2c3e66;
+        }
+
+        .step-card {
+            background: #f8f9fc;
+            border-radius: 20px;
+            border: 1px solid #e2e6ea;
+            overflow: visible;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            word-break: break-word;
+        }
+        .step-header {
+            background: #eef2f7;
+            padding: 0.6rem 1.2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            border-bottom: 1px solid #dce2e8;
+            color: #1e3a5f;
+            border-top-left-radius: 20px;   /* 与卡片圆角一致 */
+            border-top-right-radius: 20px;
+            overflow: hidden; 
+        }
+        .step-body {
+            padding: 1rem 1.2rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        .step-body p {
+            margin: 0.5rem 0;
+        }
+        .math-vector {
+            font-weight: 800;
+            font-style: normal;
+            color: #1e466e;
+        }
+        .highlight-text {
+            color: #c44536;
+            font-weight: bold;
+        }
+        button {
+            background: #2c3e66;
+            border: none;
+            color: white;
+            font-size: 0.9rem;
+            padding: 0.5rem 1.2rem;
+            margin: 0.4rem 0.6rem 0.4rem 0;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 500;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            background: #1f2c48;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        .button-group {
+            margin-top: 0.8rem;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .fixed-footer {
+            flex-shrink: 0;
+            border-top: 1px solid #e0e4e8;
+            background: #ffffff;
+            padding: 0.8rem 1.2rem;
+        }
+        .info-note {
+            background: #eef2ff;
+            border-left: 4px solid #ffaa33;
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+        .temp-message-area {
+            margin-top: 0.5rem;
+        }
+        .temp-message {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 0.4rem 0.8rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        
+        #intercept-body {
+            max-height: 240px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .highlight-line {
+            transition: color 0.2s;
+        }
+
+        /* ========== 新增：手机端响应式布局 ========== */
+        @media (max-width: 768px) {
+            /* 容器改为上下布局 */
+            .container {
+                flex-direction: column;
+                height: 100vh;
+                width: 100vw;
+            }
+            /* 3D画布占上半部分（50%高度） */
+            #canvas-container {
+                flex: none;
+                width: 100%;
+                height: 30vh;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            }
+            /* 信息面板占下半部分 */
+            .info-panel {
+                flex: 1;
+                width: 100%;
+                height: 70vh;
+                border-left: none;
+                border-top: 1px solid #ddd; /* 顶部边框替代左侧边框 */
+                box-shadow: 0 -2px 12px rgba(0,0,0,0.05);
+            }
+            /* 适配手机端文字大小 */
+            .panel-header h2 {
+                font-size: 1.2rem;
+            }
+            .step-section-title {
+                font-size: 1.1rem;
+            }
+            .step-description, .step-body {
+                font-size: 0.9rem;
+            }
+            button {
+                font-size: 0.85rem;
+                padding: 0.4rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div id="canvas-container"></div>
+    <div class="info-panel">
+        <div class="panel-header">
+            <h2>📐 倒格矢与晶面关系</h2>
+            <p>倒格矢垂直于晶面 | 晶面间距公式 d = 2π / |G<sub>h</sub>|</p>
+        </div>
+        <div class="scrollable-content" id="step-container">
+            <div>
+                <div class="step-section-title">🔷 第一步：证明倒格矢 𝑮<sub>(h₁h₂h₃)</sub> ⟂ 晶面 (h₁h₂h₃)</div>
+                <div class="step-description">
+                    📌 晶面指数 (h₁, h₂, h₃) | 基矢: <strong class="math-vector">𝒂₁, 𝒂₂, 𝒂₃</strong> 如3D图示。<br>
+                    ✨ 倒格矢 <strong class="math-vector">𝑮<sub>h</sub> = h₁𝒃₁ + h₂𝒃₂ + h₃𝒃₃</strong>，其中 𝒃<sub>i</sub> 为倒格子基矢。
+                </div>
+            </div>
+        </div>
+        <div class="fixed-footer">
+            <div class="info-note" id="operate-hint">
+                💡 <strong>操作提示：</strong> 请依次点击左侧3D场景中的<strong>球体 A、B、C</strong> (截距点) 获取截距信息。
+            </div>
+            <div id="temp-message-area" class="temp-message-area"></div>
+        </div>
+    </div>
+</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.132.2/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.132.2/examples/jsm/"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+    // ----------------------------- 参数定义 ----------------------------------
+    const a1 = new THREE.Vector3(5, 0, 0);
+    const a2 = new THREE.Vector3(2, 4, 0);
+    const a3 = new THREE.Vector3(1, 2, 5);
+    const h1_val = 3, h2_val = 3, h3_val = 4;
+    const A_pos = a1.clone().divideScalar(h1_val);
+    const B_pos = a2.clone().divideScalar(h2_val);
+    const C_pos = a3.clone().divideScalar(h3_val);
+    
+    // 倒格子基矢
+    const a2_cross_a3 = new THREE.Vector3().crossVectors(a2, a3);
+    const volume = a1.dot(a2_cross_a3);
+    const factor = 2 * Math.PI / volume;
+    const b1 = new THREE.Vector3().crossVectors(a2, a3).multiplyScalar(factor);
+    const b2 = new THREE.Vector3().crossVectors(a3, a1).multiplyScalar(factor);
+    const b3 = new THREE.Vector3().crossVectors(a1, a2).multiplyScalar(factor);
+    const Gh_vector = new THREE.Vector3().addScaledVector(b1, h1_val).addScaledVector(b2, h2_val).addScaledVector(b3, h3_val);
+    const Gh_dir = Gh_vector.clone().normalize();
+    const Gh_length_display = 3.25;
+    const Gh_display = Gh_dir.clone().multiplyScalar(Gh_length_display);
+    
+    // ----------------------------- 初始化3D场景 ----------------------------------
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xf5f7fc);
+    scene.fog = new THREE.FogExp2(0xf5f7fc, 0.008);
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    camera.position.set(3, 3.5, 5);
+    camera.lookAt(1.5, 2, 2);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+    const labelRenderer = new CSS2DRenderer();
+    labelRenderer.setSize(container.clientWidth, container.clientHeight);
+    labelRenderer.domElement.style.position = 'absolute';
+    labelRenderer.domElement.style.top = '0px';
+    labelRenderer.domElement.style.left = '0px';
+    labelRenderer.domElement.style.pointerEvents = 'none';
+    container.appendChild(labelRenderer.domElement);
+    
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.rotateSpeed = 1.2;
+    controls.zoomSpeed = 1.2;
+    controls.enableZoom = true;
+    controls.target.set(1.5, 2, 2);
+    
+    // 光源
+    const ambientLight = new THREE.AmbientLight(0x404060, 0.65);
+    scene.add(ambientLight);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    mainLight.position.set(5, 10, 7);
+    scene.add(mainLight);
+    const fillLight = new THREE.PointLight(0xccaa88, 0.4);
+    fillLight.position.set(-2, 3, 4);
+    scene.add(fillLight);
+    const backLight = new THREE.PointLight(0x88aaff, 0.3);
+    backLight.position.set(0, 2, -5);
+    scene.add(backLight);
+    
+    const axesHelper = new THREE.AxesHelper(6);
+    scene.add(axesHelper);
+    const gridHelper = new THREE.GridHelper(15, 20, 0x888888, 0xcccccc);
+    gridHelper.position.y = -1.2;
+    scene.add(gridHelper);
+    
+    // 基矢箭头
+    function addArrowWithLabel(start, dirVec, colorHex, labelText) {
+        const halfLen = dirVec.length() / 2;
+        const arrowDir = dirVec.clone().normalize();
+        const arrow = new THREE.ArrowHelper(arrowDir, start, halfLen, colorHex, 0.4, 0.2);
+        scene.add(arrow);
+        const labelPos = arrowDir.clone().multiplyScalar(halfLen * 1.05);
+        const div = document.createElement('div');
+        div.textContent = labelText;
+        div.style.color = `#${colorHex.toString(16).padStart(6,'0')}`;
+        div.style.fontSize = '20px';
+        div.style.fontWeight = 'bold';
+        div.style.background = 'rgba(255,255,200,0.8)';
+        div.style.padding = '2px 6px';
+        div.style.borderRadius = '20px';
+        div.style.border = '1px solid #ccc';
+        const labelObj = new CSS2DObject(div);
+        labelObj.position.copy(labelPos);
+        scene.add(labelObj);
+    }
+    addArrowWithLabel(new THREE.Vector3(0,0,0), a1, 0x336699, '𝒂₁');
+    addArrowWithLabel(new THREE.Vector3(0,0,0), a2, 0x336699, '𝒂₂');
+    addArrowWithLabel(new THREE.Vector3(0,0,0), a3, 0x336699, '𝒂₃');
+    
+    const GhArrow = new THREE.ArrowHelper(Gh_dir, new THREE.Vector3(0,0,0), Gh_length_display, 0xdaa520, 0.6, 0.3);
+    scene.add(GhArrow);
+    const ghDiv = document.createElement('div');
+    ghDiv.textContent = '𝑮𝒉 (倒格矢)';
+    ghDiv.style.color = '#b87c1a';
+    ghDiv.style.fontWeight = 'bold';
+    ghDiv.style.fontSize = '18px';
+    ghDiv.style.background = '#fff3e0';
+    ghDiv.style.padding = '2px 8px';
+    ghDiv.style.borderRadius = '24px';
+    ghDiv.style.border = '1px solid #daa520';
+    const ghLabel = new CSS2DObject(ghDiv);
+    ghLabel.position.copy(Gh_display.clone().multiplyScalar(1.08));
+    scene.add(ghLabel);
+    
+    // 晶面三角形
+    const vertices = [A_pos.x, A_pos.y, A_pos.z, B_pos.x, B_pos.y, B_pos.z, C_pos.x, C_pos.y, C_pos.z];
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices), 3));
+    geom.computeVertexNormals();
+    const faceMaterial = new THREE.MeshPhongMaterial({ color: 0x6c9ebf, side: THREE.DoubleSide, transparent: true, opacity: 0.45 });
+    const triangleMesh = new THREE.Mesh(geom, faceMaterial);
+    scene.add(triangleMesh);
+    const borderPoints = [A_pos, B_pos, C_pos, A_pos];
+    const lineGeom = new THREE.BufferGeometry().setFromPoints(borderPoints);
+    const borderMat = new THREE.LineBasicMaterial({ color: 0xaaaaaa });
+    const borderLines = new THREE.Line(lineGeom, borderMat);
+    scene.add(borderLines);
+    
+    // 辅助虚线
+    const dashMaterial = new THREE.LineBasicMaterial({ color: 0x88aadd });
+    const lineOA = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), A_pos]), dashMaterial);
+    const lineOB = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), B_pos]), dashMaterial);
+    const lineOC = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), C_pos]), dashMaterial);
+    scene.add(lineOA);
+    scene.add(lineOB);
+    scene.add(lineOC);
+    
+    // 球体
+    const sphereGeom = new THREE.SphereGeometry(0.11, 48, 48);
+    const defaultMat = new THREE.MeshStandardMaterial({ color: 0x3a86ff, roughness: 0.3, metalness: 0.1 });
+    const highlightMat = new THREE.MeshStandardMaterial({ color: 0xffaa44, emissive: 0x442200 });
+    const sphereA = new THREE.Mesh(sphereGeom, defaultMat.clone());
+    const sphereB = new THREE.Mesh(sphereGeom, defaultMat.clone());
+    const sphereC = new THREE.Mesh(sphereGeom, defaultMat.clone());
+    sphereA.position.copy(A_pos);
+    sphereB.position.copy(B_pos);
+    sphereC.position.copy(C_pos);
+    scene.add(sphereA);
+    scene.add(sphereB);
+    scene.add(sphereC);
+    
+    let currentHighlight = null;
+    function highlightSphere(sphere) {
+        if (currentHighlight === sphere) return;
+        if (currentHighlight) currentHighlight.material = defaultMat.clone();
+        sphere.material = highlightMat.clone();
+        currentHighlight = sphere;
+    }
+    
+    function resetSpheresHighlight() {
+        if (currentHighlight) {
+            currentHighlight.material = defaultMat.clone();
+            currentHighlight = null;
+        }
+        sphereA.material = defaultMat.clone();
+        sphereB.material = defaultMat.clone();
+        sphereC.material = defaultMat.clone();
+    }
+    
+    // ---------- 新增: CA 和 CB 线段高亮控制 ----------
+    const lineCA_geom = new THREE.BufferGeometry().setFromPoints([C_pos, A_pos]);
+    const lineCB_geom = new THREE.BufferGeometry().setFromPoints([C_pos, B_pos]);
+    const lineCA_material = new THREE.LineBasicMaterial({ color: 0xaaaaaa, linewidth: 2 }); // linewidth not supported everywhere, but color works
+    const lineCB_material = new THREE.LineBasicMaterial({ color: 0xaaaaaa });
+    const lineCA = new THREE.Line(lineCA_geom, lineCA_material);
+    const lineCB = new THREE.Line(lineCB_geom, lineCB_material);
+    scene.add(lineCA);
+    scene.add(lineCB);
+    
+    function highlightEdges_CA_CB(enable) {
+        if (enable) {
+            lineCA.material.color.setHex(0xff5555);
+            lineCB.material.color.setHex(0xff5555);
+        } else {
+            lineCA.material.color.setHex(0xaaaaaa);
+            lineCB.material.color.setHex(0xaaaaaa);
+        }
+    }
+    
+    // 晶面与倒格矢高亮控制
+    const originalPlaneColor = 0x6c9ebf;
+    const originalBorderColor = 0xaaaaaa;
+    const originalArrowColor = 0xdaa520;
+    let planeHighlighted = false;
+    function highlightPlaneAndGh(enable) {
+        if (enable) {
+            triangleMesh.material.color.setHex(0xffaa66);
+            triangleMesh.material.emissive = new THREE.Color(0x442200);
+            // borderLines.material.color.setHex(0xffaa33);
+            GhArrow.setColor(0xff6600);
+            planeHighlighted = true;
+        } else {
+            triangleMesh.material.color.setHex(originalPlaneColor);
+            triangleMesh.material.emissive = new THREE.Color(0x000000);
+            // borderLines.material.color.setHex(originalBorderColor);
+            GhArrow.setColor(originalArrowColor);
+            planeHighlighted = false;
+        }
+    }
+    
+    // CSS2D标签
+    function makeCSSLabel(text, pos, color='#1e466e') {
+        const div = document.createElement('div');
+        div.textContent = text;
+        div.style.fontSize = '20px';
+        div.style.fontWeight = 'bold';
+        div.style.color = color;
+        div.style.background = 'rgba(255,255,240,0.7)';
+        div.style.padding = '0px 6px';
+        div.style.borderRadius = '30px';
+        div.style.border = '1px solid #aaa';
+        const label = new CSS2DObject(div);
+        label.position.copy(pos);
+        scene.add(label);
+    }
+    makeCSSLabel('A', A_pos.clone().add(new THREE.Vector3(0.2, 0.2, 0.15)), '#2c5a2e');
+    makeCSSLabel('B', B_pos.clone().add(new THREE.Vector3(0.25, -0.15, 0.15)), '#2c5a2e');
+    makeCSSLabel('C', C_pos.clone().add(new THREE.Vector3(0.15, 0.15, 0.3)), '#2c5a2e');
+    makeCSSLabel('O', new THREE.Vector3(-0.2, -0.2, -0.2), '#555');
+    
+    // ----------------------------- 右侧UI动态管理 ----------------------------------
+    const stepContainer = document.getElementById('step-container');
+    const operateHint = document.getElementById('operate-hint');
+    const tempMsgDiv = document.getElementById('temp-message-area');
+    
+    let aClicked = false, bClicked = false, cClicked = false;
+    let aInfoShown = false, bInfoShown = false, cInfoShown = false;
+    let step = 0;
+    let vectorButtonShown = false, orthButtonShown = false, distBaseButtonShown = false, finalButtonShown = false;
+    let secondTitleAdded = false;
+    let interceptCard = null;
+    
+    function showTempMessage(msg, isError = false) {
+        const div = document.createElement('div');
+        div.className = 'temp-message';
+        div.style.background = isError ? '#ffebee' : '#e8f5e9';
+        div.style.borderLeftColor = isError ? '#f44336' : '#4caf50';
+        div.innerHTML = msg;
+        tempMsgDiv.appendChild(div);
+        setTimeout(() => div.remove(), 3000);
+    }
+    
+    function updateHintText(text) {
+        operateHint.innerHTML = `💡 <strong>操作提示：</strong> ${text}`;
+    }
+    
+    function scrollToBottom() {
+        const scrollDiv = document.querySelector('.scrollable-content');
+        if (scrollDiv) {
+            setTimeout(() => {
+                scrollDiv.scrollTo({ top: scrollDiv.scrollHeight, behavior: 'smooth' });
+            }, 50);
+        }
+    }
+    
+    function addStepCard(title, contentHtml, insertAfterElement = null) {
+        const card = document.createElement('div');
+        card.className = 'step-card';
+        card.innerHTML = `<div class="step-header">${title}</div><div class="step-body">${contentHtml}</div>`;
+        if (insertAfterElement && insertAfterElement.nextSibling) {
+            stepContainer.insertBefore(card, insertAfterElement.nextSibling);
+        } else {
+            stepContainer.appendChild(card);
+        }
+        return card;
+    }
+    
+    function ensureInterceptCard() {
+        if (!interceptCard) {
+            const card = document.createElement('div');
+            card.className = 'step-card';
+            card.id = 'intercept-card';
+            card.innerHTML = `<div class="step-header">📍 晶面截距点信息 (A, B, C)</div><div class="step-body" id="intercept-body"><p>点击左侧球体 A、B、C 显示截距矢量表达式。</p></div>`;
+            const firstTitle = stepContainer.children[0];
+            firstTitle.insertAdjacentElement('afterend', card);
+            interceptCard = card;
+        }
+        return interceptCard;
+    }
+    
+    function updateInterceptCard(pointName, interceptVec) {
+        const body = interceptCard.querySelector('#intercept-body');
+        let axisLetter, hSymbol;
+        if (pointName === 'A') { axisLetter = '𝒂₁'; hSymbol = 'h₁'; }
+        else if (pointName === 'B') { axisLetter = '𝒂₂'; hSymbol = 'h₂'; }
+        else { axisLetter = '𝒂₃'; hSymbol = 'h₃'; }
+        const newEntry = document.createElement('p');
+        newEntry.innerHTML = `✨ <strong>${pointName}</strong>: <strong class="math-vector">𝑶${pointName} = ${axisLetter} / ${hSymbol}</strong>`;
+        body.appendChild(newEntry);
+        body.scrollTop = body.scrollHeight;
+    }
+    
+    function addVectorCard() {
+        const content = `
+            <p><strong class="math-vector">𝑪𝑨 = 𝑶𝑨 − 𝑶𝑪 = 𝒂₁/h₁ − 𝒂₃/h₃</strong></p>
+            <p><strong class="math-vector">𝑪𝑩 = 𝑶𝑩 − 𝑶𝑪 = 𝒂₂/h₂ − 𝒂₃/h₃</strong></p>
+            <p>📐 以上两向量位于晶面 (h₁h₂h₃) 内，彼此不共线。</p>
+        `;
+        addStepCard('📐 晶面内边向量 (CA, CB)', content, interceptCard || stepContainer.children[1]);
+    }
+    
+    function addOrthProofCard() {
+        const content = `
+            <p><strong class="math-vector">𝑮<sub>h</sub> · 𝑪𝑨 = (h₁𝒃₁ + h₂𝒃₂ + h₃𝒃₃) · (𝒂₁/h₁ − 𝒂₃/h₃)</strong><br>
+            = <strong class="math-vector">h₁𝒃₁·𝒂₁/h₁ − h₃𝒃₃·𝒂₃/h₃</strong> = 2π − 2π = 0</p>
+            <p>同理 <strong class="math-vector">𝑮<sub>h</sub>·𝑪𝑩 = 0</strong>。</p>
+            <p>➜ 因此 <strong class="math-vector">𝑮<sub>h</sub></strong> 同时垂直于晶面内两个不共线向量 → <strong class="math-vector">𝑮<sub>h</sub> ⟂ 晶面 (h₁h₂h₃)</strong></p>
+            <p><span class="highlight-text">∴ 倒格矢 𝑮<sub>(h₁h₂h₃)</sub> 即为该晶面的法向量。</span></p>
+        `;
+        addStepCard('✧ 正交证明 (𝑮ₕ·𝑪𝑨 = 0, 𝑮ₕ·𝑪𝑩 = 0)', content);
+    }
+    
+    function addSecondStepTitle() {
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'step-section-title';
+        titleDiv.style.marginTop = '0.8rem';
+        titleDiv.innerHTML = '🔶 第二步：倒格矢与晶面间距关系式';
+        stepContainer.appendChild(titleDiv);
+        secondTitleAdded = true;
+        return titleDiv;
+    }
+    
+    function addDistanceBaseCard() {
+        const content = `
+            <p>单位法向量 <strong class="math-vector">𝒏 = 𝑮<sub>h</sub> / |𝑮<sub>h</sub>|</strong></p>
+            <p>对于晶面上任意点矢量 <strong class="math-vector">𝒙</strong>，有 <strong class="math-vector">𝒏 · 𝒙 = d</strong> (常数面间距)</p>
+            <p>✨ 该式表明晶面内所有点满足同一线性方程。</p>
+        `;
+        addStepCard('📏 面间距公式 (𝒏·𝒙 = d)', content);
+    }
+    
+    function addFinalFormulaCard() {
+        // 修复公式渲染：d_{h₁h₂h₃} → d<sub>(h₁h₂h₃)</sub>
+        const content = `
+            <p><strong class="math-vector">d<sub>h₁h₂h₃</sub> = 𝒏 · 𝑶𝑨 = (𝑮<sub>h</sub> / |𝑮<sub>h</sub>|) · (𝒂₁ / h₁)</strong></p>
+            <p>利用倒格矢性质 <strong class="math-vector">𝑮<sub>h</sub> · 𝒂₁ = 2π h₁</strong>，代入得：</p>
+            <p><strong class="math-vector">d = (2π h₁ / h₁) / |𝑮<sub>h</sub>| = 2π / |𝑮<sub>h</sub>|</strong></p>
+            <p>🧾 <span class="highlight-text">结论：晶面间距与倒格矢长度成反比，倒格子空间直接关联实空间晶面族。</span></p>
+        `;
+        addStepCard('🧾 晶面间距公式推导', content);
+    }
+    
+    // 按钮生成逻辑 (带高亮控制)
+    function showVectorButton() {
+        if (vectorButtonShown) return;
+        vectorButtonShown = true;
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'button-group';
+        btnGroup.id = 'action-button-group';
+        const btn = document.createElement('button');
+        btn.textContent = '📐 获取面向量 (CA, CB)';
+        btn.style.background = '#3a6ea5';
+        btn.onclick = () => {
+            // 1. 撤销ABC点的高亮
+            resetSpheresHighlight();
+            // 2. 高亮CA和CB线段
+            highlightEdges_CA_CB(true);
+            // 3. 添加卡片
+            addVectorCard();
+            btnGroup.remove();
+            step = 2;
+            updateHintText('请点击下方“正交证明”按钮，验证倒格矢与晶面垂直。');
+            showOrthButton();
+        };
+        btnGroup.appendChild(btn);
+        stepContainer.appendChild(btnGroup);
+    }
+    
+    function showOrthButton() {
+        if (orthButtonShown) return;
+        orthButtonShown = true;
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'button-group';
+        const btn = document.createElement('button');
+        btn.textContent = '✧ 正交证明 (𝑮ₕ·𝑪𝑨 = 0)';
+        btn.style.background = '#2c5a6e';
+        btn.onclick = () => {
+            // 撤销上一步高亮 (边的高亮)
+            highlightEdges_CA_CB(false);
+            resetSpheresHighlight();
+            // 高亮晶面与倒格矢
+            highlightPlaneAndGh(true);
+            // 添加正交证明卡片
+            addOrthProofCard();
+            btnGroup.remove();
+            step = 3;
+            updateHintText('第一步证明完成！现在进入第二步：倒格矢与晶面间距关系。');
+            if (!secondTitleAdded) addSecondStepTitle();
+            showDistanceBaseButton();
+        };
+        btnGroup.appendChild(btn);
+        stepContainer.appendChild(btnGroup);
+        scrollToBottom();
+    }
+    
+    function showDistanceBaseButton() {
+        if (distBaseButtonShown) return;
+        distBaseButtonShown = true;
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'button-group';
+        const btn = document.createElement('button');
+        btn.textContent = '📏 获取面间距公式 (𝒏·𝒙 = d)';
+        btn.style.background = '#2c7a5e';
+        btn.onclick = () => {
+            // 撤销当前高亮（晶面和倒格矢高亮）
+            highlightPlaneAndGh(false);
+            // 添加卡片
+            addDistanceBaseCard();
+            btnGroup.remove();
+            step = 4;
+            updateHintText('请点击下方“晶面间距公式”按钮，完成最终推导。');
+            // 滚动到底部
+            scrollToBottom();
+            showFinalFormulaButton();
+        };
+        btnGroup.appendChild(btn);
+        stepContainer.appendChild(btnGroup);
+        scrollToBottom();
+    }
+    
+    function showFinalFormulaButton() {
+        if (finalButtonShown) return;
+        finalButtonShown = true;
+        const btnGroup = document.createElement('div');
+        btnGroup.className = 'button-group';
+        const btn = document.createElement('button');
+        btn.textContent = '🧾 晶面间距公式推导';
+        btn.style.background = '#b5651e';
+        btn.onclick = () => {
+            // 确保任何残余高亮撤销
+            highlightPlaneAndGh(false);
+            highlightEdges_CA_CB(false);
+            resetSpheresHighlight();
+            // 添加最终公式卡片
+            addFinalFormulaCard();
+            btnGroup.remove();
+            step = 5;
+            updateHintText('推导完成！您可以通过鼠标拖拽/缩放继续观察3D模型。');
+            showTempMessage('✅ 全部证明与推导完成！', false);
+            // 滚动到底部
+            scrollToBottom();
+        };
+        btnGroup.appendChild(btn);
+        stepContainer.appendChild(btnGroup);
+    }
+    
+    // 点击球体逻辑
+    function onPointClick(pointName, sphere, posVec) {
+        highlightSphere(sphere);
+        let already = false;
+        if (pointName === 'A' && aInfoShown) already = true;
+        if (pointName === 'B' && bInfoShown) already = true;
+        if (pointName === 'C' && cInfoShown) already = true;
+        if (!already) {
+            ensureInterceptCard();
+            updateInterceptCard(pointName, posVec);
+            scrollToBottom();
+            if (pointName === 'A') { aClicked = true; aInfoShown = true; }
+            if (pointName === 'B') { bClicked = true; bInfoShown = true; }
+            if (pointName === 'C') { cClicked = true; cInfoShown = true; }
+            
+            const allClicked = aClicked && bClicked && cClicked;
+            if (allClicked && step === 0) {
+                step = 1;
+                updateHintText('截距信息已收集完毕。请点击下方“获取面向量”按钮继续。');
+                showVectorButton();
+                tempMsgDiv.innerHTML = '';
+            } else {
+                if (!allClicked && step === 0) {
+                    const remain = [];
+                    if (!aClicked) remain.push('A');
+                    if (!bClicked) remain.push('B');
+                    if (!cClicked) remain.push('C');
+                    showTempMessage(`⚠️ 必要信息未完全获取：请继续点击 ${remain.join(', ')} 点。`, true);
+                    updateHintText(`请继续点击 ${remain.join(', ')} 获取截距信息。`);
+                }
+            }
+        } else {
+            showTempMessage(`点 ${pointName} 截距已记录，请点击其他未访问的点。`, true);
+        }
+    }
+    
+    // 射线交互
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    function onCanvasClick(event) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        mouse.set(x, y);
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects([sphereA, sphereB, sphereC]);
+        if (intersects.length > 0) {
+            const hit = intersects[0].object;
+            if (hit === sphereA) onPointClick('A', sphereA, A_pos);
+            else if (hit === sphereB) onPointClick('B', sphereB, B_pos);
+            else if (hit === sphereC) onPointClick('C', sphereC, C_pos);
+        }
+    }
+    renderer.domElement.addEventListener('click', onCanvasClick);
+    
+    function handleResize() {
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+        labelRenderer.setSize(width, height);
+    }
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+        labelRenderer.render(scene, camera);
+    }
+    animate();
+    
+    updateHintText('请依次点击左侧3D场景中的球体 A、B、C (截距点) 获取截距信息。');
+</script>
+</body>
+</html>
