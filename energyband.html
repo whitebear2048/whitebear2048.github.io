@@ -142,7 +142,7 @@
       <div class="controls">
         <label>原子数 N</label>
         <div class="slider-wrap">
-          <input type="range" id="atomRange" min="1" max="8" step="1" value="2">
+          <input type="range" id="atomRange" min="1" max="4" step="1" value="1">
           <span class="badge-N" id="atomCount">2</span>
         </div>
         <button class="btn" id="crystalBtn">晶体模式（N 很大）</button>
@@ -164,7 +164,7 @@
   const advanceBtn = document.getElementById('advanceBtn');
   const NS = 'http://www.w3.org/2000/svg';
 
-  let N = 2;
+  let N = 1;
   let crystal = false;
   let crystalStep = 0;        // 0:2s/2p线 1:允带/禁带 2:填电子 3:价带/导带+Ec/Ev/Eg 4:跃迁后
   let jumpPhase = 'idle';     // idle | flying | done
@@ -183,7 +183,8 @@
   const EC_Y = CB_BOT;
   const CB_C = (CB_TOP + CB_BOT) / 2;
   const VB_C = (VB_TOP + VB_BOT) / 2;
-  const BAND_LINES = 10;
+  const VB_LINES = 10;                       // 2s 价带：单度简并
+  const CB_LINES = 3 * VB_LINES;             // 2p 导带：三度简并 → 3 倍，与离散模式 2p → 3N 一致
 
   function el(tag, attrs) {
     const e = document.createElementNS(NS, tag);
@@ -203,28 +204,41 @@
     text(AX - 8, 40, '能量 E', { 'text-anchor': 'end', 'font-size': 16 });
   }
 
-  // 非晶体：N 条贯穿长线表示能级（每条贯穿 X1~X2，像能带雏形）
+  // 非晶体：N 个原子时
+  //   2s 为单度简并 → 分裂成 N 条能级
+  //   2p 为三度简并 → 分裂成 3N 条能级
   function drawDiscreteLevels() {
-    const spP = N <= 1 ? 0 : Math.min(36, (N - 1) * 5.5);
-    const spS = N <= 1 ? 0 : Math.min(60, (N - 1) * 9);
-    for (let i = 0; i < N; i++) {
-      const t = N === 1 ? 0 : (i / (N - 1) - 0.5);
-      const y2p = CB_C + spP * t;
-      const y2s = VB_C + spS * t;
-      svg.appendChild(el('line', { x1: X1, y1: y2p, x2: X2, y2: y2p, stroke: '#7c3aed', 'stroke-width': 2.4 }));
-      svg.appendChild(el('line', { x1: X1, y1: y2s, x2: X2, y2: y2s, stroke: '#1d4ed8', 'stroke-width': 3 }));
+    const halfS = 34;   // 2s 能级分布半高（y 向下为能量高）
+    const halfP = 40;   // 2p 能级分布半高
+    // 2s：N 条
+    for (let k = 0; k < N; k++) {
+      const y = VB_C + (N > 1 ? (k / (N - 1) - 0.5) * 2 * halfS : 0);
+      svg.appendChild(el('line', { x1: X1, y1: y, x2: X2, y2: y, stroke: '#1d4ed8', 'stroke-width': 3 }));
+    }
+    // 2p：3N 条
+    const totalP = 3 * N;
+    for (let m = 0; m < totalP; m++) {
+      const y = CB_C + (totalP > 1 ? (m / (totalP - 1) - 0.5) * 2 * halfP : 0);
+      svg.appendChild(el('line', { x1: X1, y1: y, x2: X2, y2: y, stroke: '#7c3aed', 'stroke-width': 2.2 }));
     }
     // 2s / 2p 标在能量轴（x=80）右侧
     text(125, CB_C + 5, '2p', { 'text-anchor': 'middle', 'font-weight': 700, fill: '#7c3aed', 'font-size': 18 });
     text(125, VB_C + 5, '2s', { 'text-anchor': 'middle', 'font-weight': 700, fill: '#1d4ed8', 'font-size': 18 });
+    // 简并度标注
+    text(X2 - 4, CB_C - halfP - 8, '2p · 三度简并 → 3N 条', { 'text-anchor': 'end', 'font-size': 14, fill: '#7c3aed', 'font-weight': 600 });
+    text(X2 - 4, VB_C + halfS + 22, '2s · 单度简并 → N 条', { 'text-anchor': 'end', 'font-size': 14, fill: '#1d4ed8', 'font-weight': 600 });
   }
 
-  // 晶体：2s/2p 各画 BAND_LINES 条贯穿长线（像密集能带）
+  // 晶体：2s 价带 VB_LINES 条，2p 导带 3×VB_LINES 条（维持 3:1 简并比例）
   function drawCrystalBase() {
-    for (let i = 0; i < BAND_LINES; i++) {
-      const yp = CB_TOP + (CB_BOT - CB_TOP) * (i + 0.5) / BAND_LINES;
-      const ys = VB_TOP + (VB_BOT - VB_TOP) * (i + 0.5) / BAND_LINES;
-      svg.appendChild(el('line', { x1: X1, y1: yp, x2: X2, y2: yp, stroke: '#7c3aed', 'stroke-width': 2.6 }));
+    // 2p 导带（三度简并，线条密）
+    for (let i = 0; i < CB_LINES; i++) {
+      const yp = CB_TOP + (CB_BOT - CB_TOP) * (i + 0.5) / CB_LINES;
+      svg.appendChild(el('line', { x1: X1, y1: yp, x2: X2, y2: yp, stroke: '#7c3aed', 'stroke-width': 1.5 }));
+    }
+    // 2s 价带（单度简并，线条疏）
+    for (let i = 0; i < VB_LINES; i++) {
+      const ys = VB_TOP + (VB_BOT - VB_TOP) * (i + 0.5) / VB_LINES;
       svg.appendChild(el('line', { x1: X1, y1: ys, x2: X2, y2: ys, stroke: '#1d4ed8', 'stroke-width': 2.6 }));
     }
   }
@@ -251,12 +265,12 @@
 
   function valenceLinesY() {
     const a = [];
-    for (let i = 0; i < BAND_LINES; i++) a.push(VB_TOP + (VB_BOT - VB_TOP) * (i + 0.5) / BAND_LINES);
+    for (let i = 0; i < VB_LINES; i++) a.push(VB_TOP + (VB_BOT - VB_TOP) * (i + 0.5) / VB_LINES);
     return a;
   }
   function conductionLinesY() {
     const a = [];
-    for (let i = 0; i < BAND_LINES; i++) a.push(CB_TOP + (CB_BOT - CB_TOP) * (i + 0.5) / BAND_LINES);
+    for (let i = 0; i < CB_LINES; i++) a.push(CB_TOP + (CB_BOT - CB_TOP) * (i + 0.5) / CB_LINES);
     return a;
   }
 
@@ -371,8 +385,8 @@
     const onTop2 = pos.filter(p => Math.abs(p.y - top2) < 1);
     const starts = [onTop1[0], onTop1[2], onTop2[1]].filter(Boolean).slice(0, 3);
     const cLines = conductionLinesY();
-    const bot1 = cLines[BAND_LINES - 1];  // 导带底最低线（能量最低）
-    const bot2 = cLines[BAND_LINES - 2];
+    const bot1 = cLines[CB_LINES - 1];  // 导带底最低线（能量最低）
+    const bot2 = cLines[CB_LINES - 2];
     const ends = [
       { x: starts[0].x, y: bot1 },
       { x: starts[1].x, y: bot1 },
