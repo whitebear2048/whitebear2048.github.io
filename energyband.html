@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>能带的形成与原理</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --surface: #ffffff;
+    --surface-2: #eef2f8;
+    --text: #0f1c2e;
+    --muted: #5b6b82;
+    --primary: #2563eb;
+    --primary-soft: #e8effd;
+    --accent: #7c3aed;
+    --red: #e11d48;
+    --amber: #d97706;
+    --line: #dde5ef;
+    --shadow: 0 10px 30px rgba(30, 64, 175, 0.08);
+    --shadow-sm: 0 2px 8px rgba(30, 64, 175, 0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--primary); text-decoration: none; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    max-width: 1000px; margin: 0 auto; padding: 12px 24px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .nav-logo { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .nav-logo .dot { width: 12px; height: 12px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); display: inline-block; }
+  .nav-links { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+  .nav-links a { color: var(--muted); padding: 6px 12px; border-radius: 8px; font-size: 14px; transition: all .18s ease; }
+  .nav-links a:hover { color: var(--primary); background: var(--primary-soft); }
+
+  .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 56px 0; }
+
+  .hero {
+    padding: 76px 0 64px;
+    background:
+      radial-gradient(1100px 480px at 15% -10%, #e0ecff 0%, rgba(224,236,255,0) 60%),
+      radial-gradient(900px 420px at 90% 0%, #ede9fe 0%, rgba(237,233,254,0) 55%), var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero .tag {
+    display: inline-block; font-size: 13px; font-weight: 600; color: var(--primary);
+    background: var(--primary-soft); padding: 5px 14px; border-radius: 999px; margin-bottom: 20px; letter-spacing: .5px;
+  }
+  .hero h1 { font-size: 42px; line-height: 1.2; font-weight: 800; letter-spacing: 1px; margin-bottom: 16px; }
+  .hero h1 .grad { background: linear-gradient(120deg, var(--primary), var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p.sub { font-size: 18px; color: var(--muted); max-width: 680px; }
+  .hero .meta { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .hero .meta span { font-size: 13px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); padding: 5px 12px; border-radius: 8px; }
+
+  .sec-head { margin-bottom: 30px; }
+  .sec-head h2 { display: inline-block; font-size: 26px; font-weight: 800; vertical-align: middle; }
+  .sec-head .lead { margin-top: 10px; color: var(--muted); font-size: 15.5px; }
+
+  /* 演示区 */
+  .demo { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 22px; box-shadow: var(--shadow-sm); }
+  .demo .controls {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--line);
+  }
+  .demo .controls label { font-size: 14px; font-weight: 600; }
+  .slider-wrap { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
+  input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 6px; border-radius: 6px; background: linear-gradient(90deg, var(--primary), var(--accent)); outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 3px solid var(--primary); cursor: pointer; box-shadow: 0 2px 6px rgba(37,99,235,.35); }
+  .badge-N { font-size: 16px; font-weight: 800; color: var(--primary); min-width: 30px; text-align: center; }
+
+  .btn {
+    border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    padding: 8px 16px; border-radius: 9px; font-size: 14px; cursor: pointer;
+    transition: all .15s ease; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn.primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border: none; font-weight: 700; box-shadow: 0 4px 14px rgba(37,99,235,.3); }
+  .btn.primary:hover { transform: translateY(-1px); color: #fff; }
+  .btn.toggle-on { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); font-weight: 700; }
+
+  .demo svg { width: 100%; height: auto; display: block; }
+  .demo .hint {
+    text-align: center; font-size: 14.5px; color: var(--muted);
+    margin-top: 12px; padding: 12px 16px; border-radius: 10px; background: var(--surface-2);
+  }
+  .demo .hint b { color: var(--primary); }
+
+  /* 步骤卡片 */
+  .steps { display: grid; gap: 16px; }
+  .step {
+    display: flex; gap: 18px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 22px; box-shadow: var(--shadow-sm);
+  }
+  .step .idx {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;
+  }
+  .step h4 { font-size: 16.5px; margin-bottom: 4px; }
+  .step p { font-size: 14.5px; color: var(--muted); }
+
+  /* 术语表 */
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-sm); font-size: 14.5px; }
+  thead th { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; text-align: left; padding: 13px 18px; font-weight: 700; }
+  tbody td { padding: 12px 18px; border-top: 1px solid var(--line); vertical-align: top; }
+  tbody tr:nth-child(even) { background: #fafcff; }
+  tbody td:first-child { font-weight: 700; color: var(--primary); white-space: nowrap; }
+
+  footer { border-top: 1px solid var(--line); padding: 32px 0; text-align: center; color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+
+<section id="demo">
+  <div class="container">
+    <div class="sec-head">
+      <h2>能带的形成过程</h2>
+    </div>
+
+    <div class="demo">
+      <div class="controls">
+        <label>原子数 N</label>
+        <div class="slider-wrap">
+          <input type="range" id="atomRange" min="1" max="8" step="1" value="2">
+          <span class="badge-N" id="atomCount">2</span>
+        </div>
+        <button class="btn" id="crystalBtn">晶体模式（N 很大）</button>
+        <button class="btn primary" id="advanceBtn" style="display:none;">标注允带与禁带</button>
+      </div>
+
+      <svg id="mainSvg" viewBox="0 0 820 500" role="img" aria-label="能带形成过程演示图"></svg>
+    </div>
+  </div>
+</section>
+
+
+<script>
+(function () {
+  const svg = document.getElementById('mainSvg');
+  const range = document.getElementById('atomRange');
+  const countEl = document.getElementById('atomCount');
+  const crystalBtn = document.getElementById('crystalBtn');
+  const advanceBtn = document.getElementById('advanceBtn');
+  const NS = 'http://www.w3.org/2000/svg';
+
+  let N = 2;
+  let crystal = false;
+  let crystalStep = 0;        // 0:2s/2p线 1:允带/禁带 2:填电子 3:价带/导带+Ec/Ev/Eg 4:跃迁后
+  let jumpPhase = 'idle';     // idle | flying | done
+  let jumpT = 0;
+  let flying = [];            // [{x,y,sx,sy,ex,ey}]
+  let holes = [];             // [{x,y}]
+  let condElectrons = [];     // [{x,y,gx,timer}] 导带电子（step 5 可在能级上左右移动）
+  let lastTime = null;
+
+  // 几何参数
+  const AX = 80;
+  const X1 = 170, X2 = 560;
+  const CB_TOP = 90, CB_BOT = 150;
+  const VB_TOP = 340, VB_BOT = 420;
+  const EV_Y = VB_TOP;
+  const EC_Y = CB_BOT;
+  const CB_C = (CB_TOP + CB_BOT) / 2;
+  const VB_C = (VB_TOP + VB_BOT) / 2;
+  const BAND_LINES = 10;
+
+  function el(tag, attrs) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function text(x, y, s, o) {
+    const t = el('text', Object.assign({ x: x, y: y, 'font-size': 14, fill: '#5b6b82' }, o || {}));
+    t.textContent = s;
+    svg.appendChild(t);
+    return t;
+  }
+
+  function drawEnergyAxis() {
+    svg.appendChild(el('line', { x1: AX, y1: 60, x2: AX, y2: 460, stroke: '#94a3b8', 'stroke-width': 1.5 }));
+    svg.appendChild(el('polygon', { points: '80,52 74,64 86,64', fill: '#94a3b8' }));
+    text(AX - 8, 40, '能量 E', { 'text-anchor': 'end', 'font-size': 16 });
+  }
+
+  // 非晶体：N 条贯穿长线表示能级（每条贯穿 X1~X2，像能带雏形）
+  function drawDiscreteLevels() {
+    const spP = N <= 1 ? 0 : Math.min(36, (N - 1) * 5.5);
+    const spS = N <= 1 ? 0 : Math.min(60, (N - 1) * 9);
+    for (let i = 0; i < N; i++) {
+      const t = N === 1 ? 0 : (i / (N - 1) - 0.5);
+      const y2p = CB_C + spP * t;
+      const y2s = VB_C + spS * t;
+      svg.appendChild(el('line', { x1: X1, y1: y2p, x2: X2, y2: y2p, stroke: '#7c3aed', 'stroke-width': 2.4 }));
+      svg.appendChild(el('line', { x1: X1, y1: y2s, x2: X2, y2: y2s, stroke: '#1d4ed8', 'stroke-width': 3 }));
+    }
+    // 2s / 2p 标在能量轴（x=80）右侧
+    text(125, CB_C + 5, '2p', { 'text-anchor': 'middle', 'font-weight': 700, fill: '#7c3aed', 'font-size': 18 });
+    text(125, VB_C + 5, '2s', { 'text-anchor': 'middle', 'font-weight': 700, fill: '#1d4ed8', 'font-size': 18 });
+  }
+
+  // 晶体：2s/2p 各画 BAND_LINES 条贯穿长线（像密集能带）
+  function drawCrystalBase() {
+    for (let i = 0; i < BAND_LINES; i++) {
+      const yp = CB_TOP + (CB_BOT - CB_TOP) * (i + 0.5) / BAND_LINES;
+      const ys = VB_TOP + (VB_BOT - VB_TOP) * (i + 0.5) / BAND_LINES;
+      svg.appendChild(el('line', { x1: X1, y1: yp, x2: X2, y2: yp, stroke: '#7c3aed', 'stroke-width': 2.6 }));
+      svg.appendChild(el('line', { x1: X1, y1: ys, x2: X2, y2: ys, stroke: '#1d4ed8', 'stroke-width': 2.6 }));
+    }
+  }
+
+  // step 0~2：左侧标 2s / 2p
+  // step 3 起上移，给下方的"价带/导带"标签让位
+  function drawBandNameLabels() {
+    const dy = (crystalStep >= 3) ? -10 : 5;
+    text(125, CB_C + dy, '2p', { 'text-anchor': 'middle', 'font-weight': 700, fill: '#7c3aed', 'font-size': 18 });
+    text(125, VB_C + dy, '2s', { 'text-anchor': 'middle', 'font-weight': 700, fill: '#1d4ed8', 'font-size': 18 });
+  }
+
+  // step 1+：右侧标"允带"，中间标"禁带"
+  function drawAllowedForbidden() {
+    text(X2 + 14, CB_C + 5, '允带', { 'font-weight': 700, fill: '#0f172a', 'font-size': 17 });
+    text(X2 + 14, VB_C + 5, '允带', { 'font-weight': 700, fill: '#0f172a', 'font-size': 17 });
+    const gapMid = (CB_BOT + VB_TOP) / 2;
+    text((X1 + X2) / 2, gapMid, '禁带', { 'text-anchor': 'middle', fill: '#475569', 'font-weight': 800, 'font-size': 24 });
+  }
+
+  // 价带每条贯穿线上的电子 x 位置；相邻行错开半格，避免上下对齐成列
+  const ELECTRON_XS = [X1 + 50, X1 + 140, X1 + 230, X1 + 320, X1 + 410];
+  const ELECTRON_STAGGER = 45;
+
+  function valenceLinesY() {
+    const a = [];
+    for (let i = 0; i < BAND_LINES; i++) a.push(VB_TOP + (VB_BOT - VB_TOP) * (i + 0.5) / BAND_LINES);
+    return a;
+  }
+  function conductionLinesY() {
+    const a = [];
+    for (let i = 0; i < BAND_LINES; i++) a.push(CB_TOP + (CB_BOT - CB_TOP) * (i + 0.5) / BAND_LINES);
+    return a;
+  }
+
+  // 价带所有电子的实际位置（含错开与边界裁剪），供绘制与跃迁取点共用
+  function valenceElectronPositions() {
+    const pos = [];
+    valenceLinesY().forEach((ly, idx) => {
+      const offset = (idx % 2 === 0) ? 0 : ELECTRON_STAGGER;
+      ELECTRON_XS.forEach(xx0 => {
+        const xx = xx0 + offset;
+        if (xx > X2 - 12) return;   // 越界跳过
+        pos.push({ x: xx, y: ly });
+      });
+    });
+    return pos;
+  }
+
+  // step 2+：价带填满电子（深蓝实心点），空穴位置画白圈
+  function drawValenceFilled() {
+    valenceElectronPositions().forEach(p => {
+      const isHole = holes.some(h => Math.abs(h.x - p.x) < 1 && Math.abs(h.y - p.y) < 1);
+      if (isHole) {
+        svg.appendChild(el('circle', { cx: p.x, cy: p.y, r: 6, fill: '#ffffff', stroke: '#1d4ed8', 'stroke-width': 1.8 }));
+      } else {
+        svg.appendChild(el('circle', { cx: p.x, cy: p.y, r: 5.5, fill: '#1d4ed8' }));
+      }
+    });
+  }
+
+  // step 4：导带底新增的电子（跃迁到达）
+  function drawCondElectrons() {
+    condElectrons.forEach((p, i) => {
+      const g = el('g', { 'data-cond': i });
+      g.appendChild(el('circle', { r: 5.5, fill: '#7c3aed' }));
+      svg.appendChild(g);
+      g.setAttribute('transform', 'translate(' + p.x.toFixed(1) + ',' + p.y.toFixed(1) + ')');
+    });
+  }
+
+  // step 3+：左侧标"价带（2s）""导带（2p）"，右侧标 Ec/Ev/Eg
+  function drawValenceConductionLabels() {
+    // 价带/导带文字放能量轴右侧、2s/2p 下方
+    text(86, CB_C + 18, '导带（2p）', { 'font-weight': 800, fill: '#7c3aed', 'font-size': 16 });
+    text(86, VB_C + 18, '价带（2s）', { 'font-weight': 800, fill: '#1d4ed8', 'font-size': 16 });
+    const gapMid = (CB_BOT + VB_TOP) / 2;
+    // Eg 双箭头（能级线右端内侧）
+    svg.appendChild(el('line', { x1: X2 - 10, y1: EC_Y, x2: X2 - 10, y2: EV_Y, stroke: '#e11d48', 'stroke-width': 2 }));
+    svg.appendChild(el('polygon', { points: (X2 - 10) + ',' + EC_Y + ' ' + (X2 - 15) + ',' + (EC_Y + 10) + ' ' + (X2 - 5) + ',' + (EC_Y + 10), fill: '#e11d48' }));
+    svg.appendChild(el('polygon', { points: (X2 - 10) + ',' + EV_Y + ' ' + (X2 - 15) + ',' + (EV_Y - 10) + ' ' + (X2 - 5) + ',' + (EV_Y - 10), fill: '#e11d48' }));
+    // Ec / Ev 虚线 + 中文名
+    svg.appendChild(el('line', { x1: X2, y1: EC_Y, x2: 600, y2: EC_Y, stroke: '#7c3aed', 'stroke-width': 1.5, 'stroke-dasharray': '5 3' }));
+    text(608, EC_Y - 2, 'Ec（导带底）', { 'font-weight': 700, fill: '#7c3aed', 'font-size': 16 });
+    svg.appendChild(el('line', { x1: X2, y1: EV_Y, x2: 600, y2: EV_Y, stroke: '#1d4ed8', 'stroke-width': 1.5, 'stroke-dasharray': '5 3' }));
+    text(608, EV_Y - 2, 'Ev（价带顶）', { 'font-weight': 700, fill: '#1d4ed8', 'font-size': 16 });
+    // Eg 中文名 + 关系式
+    text(608, gapMid - 6, 'Eg（禁带宽度）', { 'font-weight': 700, fill: '#e11d48', 'font-size': 16 });
+    text(608, gapMid + 20, 'Eg = Ec − Ev', { 'font-weight': 700, fill: '#e11d48', 'font-size': 16 });
+  }
+
+  // 飞行中的电子（橙色亮点）
+  function drawFlyingElectrons() {
+    flying.forEach((f, i) => {
+      const g = el('g', { 'data-fly': i });
+      g.appendChild(el('circle', { r: 12, fill: '#f59e0b', opacity: 0.32 }));
+      g.appendChild(el('circle', { r: 5.5, fill: '#f59e0b', stroke: '#ffffff', 'stroke-width': 1.5 }));
+      svg.appendChild(g);
+      g.setAttribute('transform', 'translate(' + f.x.toFixed(1) + ',' + f.y.toFixed(1) + ')');
+    });
+  }
+
+  function drawMain() {
+    svg.innerHTML = '';
+    drawEnergyAxis();
+    if (!crystal) {
+      drawDiscreteLevels();
+    } else {
+      drawCrystalBase();
+      if (crystalStep < 3) drawBandNameLabels();
+      if (crystalStep >= 1) drawAllowedForbidden();
+      if (crystalStep >= 2) drawValenceFilled();
+      if (crystalStep >= 3) drawValenceConductionLabels();
+      if (jumpPhase === 'flying') drawFlyingElectrons();
+      if (crystalStep >= 4) drawCondElectrons();
+    }
+  }
+
+  const ADVANCE_TEXTS = ['标注允带与禁带', '显示电子填充', '标注价带与导带', '电子跃迁', '电子自由移动', '重置演示'];
+
+  function updateAdvanceBtn() {
+    if (!crystal) {
+      advanceBtn.style.display = 'none';
+      range.disabled = false;
+      return;
+    }
+    advanceBtn.style.display = '';
+    range.disabled = true;
+    if (jumpPhase === 'flying') {
+      advanceBtn.disabled = true;
+      advanceBtn.textContent = '跃迁中…';
+    } else {
+      advanceBtn.disabled = false;
+      advanceBtn.textContent = ADVANCE_TEXTS[crystalStep] || '重置演示';
+    }
+  }
+
+  function startJump() {
+    const pos = valenceElectronPositions();
+    const vLines = valenceLinesY();
+    const top1 = vLines[0];   // 价带顶第一条线（能量最高）
+    const top2 = vLines[1];
+    const onTop1 = pos.filter(p => Math.abs(p.y - top1) < 1);
+    const onTop2 = pos.filter(p => Math.abs(p.y - top2) < 1);
+    const starts = [onTop1[0], onTop1[2], onTop2[1]].filter(Boolean).slice(0, 3);
+    const cLines = conductionLinesY();
+    const bot1 = cLines[BAND_LINES - 1];  // 导带底最低线（能量最低）
+    const bot2 = cLines[BAND_LINES - 2];
+    const ends = [
+      { x: starts[0].x, y: bot1 },
+      { x: starts[1].x, y: bot1 },
+      { x: starts[2].x, y: bot2 }
+    ];
+    flying = starts.map((s, i) => ({ x: s.x, y: s.y, sx: s.x, sy: s.y, ex: ends[i].x, ey: ends[i].y }));
+    holes = starts.map(s => ({ x: s.x, y: s.y }));
+    condElectrons = ends.map(e => ({ x: e.x, y: e.y, gx: e.x, timer: 0 }));
+    jumpPhase = 'flying';
+    jumpT = 0;
+  }
+
+  function easeInOut(t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; }
+
+  function frame(now) {
+    if (lastTime === null) lastTime = now;
+    let dt = (now - lastTime) / 1000;
+    lastTime = now;
+    dt = Math.min(dt, 0.05);
+
+    if (jumpPhase === 'flying') {
+      jumpT += dt / 1.5;
+      const p = Math.min(jumpT, 1);
+      const e = easeInOut(p);
+      flying.forEach(f => {
+        f.x = f.sx + (f.ex - f.sx) * e;
+        f.y = f.sy + (f.ey - f.sy) * e;
+      });
+      const flys = svg.querySelectorAll('g[data-fly]');
+      flying.forEach((f, i) => {
+        if (flys[i]) flys[i].setAttribute('transform', 'translate(' + f.x.toFixed(1) + ',' + f.y.toFixed(1) + ')');
+      });
+      if (p >= 1) {
+        jumpPhase = 'done';
+        flying = [];
+        crystalStep = 4;
+        drawMain();
+        updateAdvanceBtn();
+      }
+    } else if (crystal && crystalStep === 5) {
+      // 导带电子在能级线上左右自由移动
+      condElectrons.forEach(ce => {
+        ce.timer -= dt;
+        if (ce.timer <= 0) {
+          ce.gx = X1 + 30 + Math.random() * (X2 - X1 - 60);
+          ce.timer = 0.8 + Math.random() * 1.0;
+        }
+        const k = 1 - Math.exp(-1.8 * dt);
+        ce.x += (ce.gx - ce.x) * k;
+      });
+      const cs = svg.querySelectorAll('g[data-cond]');
+      condElectrons.forEach((ce, i) => {
+        if (cs[i]) cs[i].setAttribute('transform', 'translate(' + ce.x.toFixed(1) + ',' + ce.y.toFixed(1) + ')');
+      });
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  range.addEventListener('input', function () {
+    if (crystal) return;
+    N = parseInt(range.value, 10);
+    countEl.textContent = N;
+    drawMain();
+  });
+
+  crystalBtn.addEventListener('click', function () {
+    crystal = !crystal;
+    if (crystal) {
+      crystalBtn.classList.add('toggle-on');
+      crystalBtn.textContent = '晶体模式：开';
+      crystalStep = 0;
+      jumpPhase = 'idle';
+      holes = []; condElectrons = []; flying = [];
+    } else {
+      crystalBtn.classList.remove('toggle-on');
+      crystalBtn.textContent = '晶体模式（N 很大）';
+      crystalStep = 0;
+      jumpPhase = 'idle';
+      holes = []; condElectrons = []; flying = [];
+    }
+    updateAdvanceBtn();
+    drawMain();
+  });
+
+  advanceBtn.addEventListener('click', function () {
+    if (!crystal || jumpPhase === 'flying') return;
+    if (crystalStep === 5) {
+      crystalStep = 0;
+      jumpPhase = 'idle';
+      holes = []; condElectrons = []; flying = [];
+    } else if (crystalStep === 3) {
+      startJump();
+    } else {
+      crystalStep++;
+    }
+    updateAdvanceBtn();
+    drawMain();
+  });
+
+  updateAdvanceBtn();
+  drawMain();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
