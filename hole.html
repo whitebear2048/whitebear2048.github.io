@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="qYEkHyjqWc8YamcB6O9Ilo">
+<head data-page-node-id="yzNHQWDu7yxuOlIUON1kDy">
+<meta charset="UTF-8" data-page-node-id="hD74EcvgNe0y7SI1DYt7kp">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="FQADaj3uB6SobMhuFf5tBR">
+<title>k空间中电子与空穴的运动：实际情况 vs 简化模型</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    background: linear-gradient(135deg, #eef0fb 0%, #f3effc 55%, #eef4fd 100%);
+    color: #2b2b45; padding: 28px 14px 60px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  header { text-align:center; margin-bottom:22px; }
+  header h1 {
+    font-size: 26px; font-weight:700;
+    background: linear-gradient(90deg,#4a3fb5,#7c5cd6,#3f6ad8);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+    letter-spacing:1px;
+  }
+  header p { color:#6a6a8c; font-size:14px; margin-top:8px; }
+  .card {
+    background:#ffffff; border-radius:14px; padding:18px 20px 14px;
+    box-shadow:0 4px 18px rgba(74,63,181,.10); margin-bottom:18px;
+  }
+  .panel-title { font-size:15px; font-weight:700; color:#4a3fb5; margin-bottom:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .panel-title .tag { font-size:12px; font-weight:400; color:#8a8aad; }
+  canvas { width:100%; height:auto; display:block; border-radius:8px; }
+  .controls { display:flex; flex-wrap:wrap; gap:14px 20px; align-items:center; }
+  button {
+    border:none; border-radius:10px; padding:11px 22px; font-size:15px; cursor:pointer;
+    font-family:inherit; transition:.15s;
+  }
+  #btnStepA { background:linear-gradient(90deg,#5b4fc4,#7c5cd6); color:#fff; font-weight:700; font-size:16px; padding:12px 28px; }
+  #btnStepA:hover { filter:brightness(1.12); }
+  #btnBackA, #btnResetA, #btnAutoB, #btnResetB, #btnReset { background:#eceafb; color:#4a3fb5; }
+  #btnBackA:hover, #btnResetA:hover, #btnAutoB:hover, #btnResetB:hover, #btnReset:hover { background:#dcd8f6; }
+  #btnAutoB.on { background:#2f8f5b; color:#fff; }
+  .pctrl { padding-bottom:12px; margin-bottom:12px; border-bottom:1px dashed #e3e0f5; }
+  .ctrl { display:flex; align-items:center; gap:8px; font-size:14px; color:#55557a; }
+  select { font-family:inherit; font-size:14px; padding:7px 10px; border-radius:8px; border:1px solid #d5d3ee; color:#4a3fb5; background:#f7f6fd; }
+  .tip { font-size:13px; color:#8a8aad; margin-top:10px; }
+  .stats { font-size:14px; color:#4a3fb5; margin-top:10px; background:#f4f3fc; border-radius:8px; padding:10px 14px; line-height:1.9; font-family:"Microsoft YaHei",monospace; }
+  .step-note { font-size:14px; color:#4b4b68; margin-top:8px; min-height:22px; }
+  .legend { display:flex; flex-wrap:wrap; gap:16px; margin-top:10px; font-size:13px; color:#6a6a8c; align-items:center; }
+  .dot { display:inline-block; width:13px; height:13px; border-radius:50%; margin-right:6px; vertical-align:-2px; }
+  .hole-dot { display:inline-block; width:14px; height:14px; border-radius:50%; border:3.5px solid #e0533d; background:#fff; margin-right:6px; vertical-align:-2px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin-bottom:18px; }
+  .info { border-top:4px solid #5b4fc4; }
+  .info h3 { font-size:15px; color:#4a3fb5; margin-bottom:8px; }
+  .info p, .info li { font-size:13.5px; line-height:1.9; color:#4b4b68; }
+  .info ul { padding-left:18px; }
+  .formula {
+    display:inline-block; background:#f4f3fc; border-radius:6px; padding:2px 10px;
+    font-family:Consolas,monospace; color:#4a3fb5; font-size:13px; margin:2px 0;
+  }
+  .key { background:linear-gradient(135deg,#f3f0fd,#eef3fd); border-left:5px solid #e0533d; }
+  .key p { font-size:14px; line-height:2; }
+  .key b { color:#c9402c; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th,td { border:1px solid #e0ddf2; padding:10px 12px; text-align:left; line-height:1.8; }
+  th { background:#f0eefb; color:#4a3fb5; font-weight:700; }
+  td { color:#4b4b68; }
+  tr:nth-child(even) td { background:#faf9fe; }
+  .same { color:#2f8f5b; font-weight:700; }
+  .opp { color:#c9402c; font-weight:700; }
+  footer { text-align:center; font-size:12px; color:#9a9ab8; margin-top:26px; }
+</style>
+</head>
+<body data-page-node-id="DXaAsmmpOgK3aGfBOnlLps">
+<div class="wrap" data-page-node-id="YpE98wGppqMiokfMKSeg4o">
+
+  <header data-page-node-id="NWtFs3oPeTl0n3a7bXykBE">
+    <h1>k 空间中电子与空穴的运动：实际情况 vs 简化模型</h1>
+    <p>近满带在外电场 ℰ 下的演化：面板一为实际情况（手动逐步，相邻电子逐个跃入空位），面板二为简化模型（点击后自动连续平移）</p>
+  </header>
+
+  <div class="card" data-page-node-id="A9iFrBnGr9E7qB1IABY61C">
+    <div class="panel-title">控制台 <span class="tag">面板一与面板二各自独立步进</span></div>
+    <div class="controls">
+      <button id="btnReset">↺ 全部重置</button>
+      <div class="ctrl">电场方向：
+        <select id="selDir">
+          <option value="1">+ℰ（电子向 −k 跃迁）</option>
+          <option value="-1">−ℰ（电子向 +k 跃迁）</option>
+        </select>
+      </div>
+      <div class="ctrl"><label><input type="checkbox" id="ckLabel" checked> 显示字母标记</label></div>
+    </div>
+    <div class="tip">键盘 → 或 空格 推进面板一，← 后退面板一（两面板互不干扰）</div>
+    <div class="legend" data-page-node-id="BIDxWqV9WxkYQZIy1DETSm">
+      <span data-page-node-id="MjwDod9c74zrwOEE6u5Abe"><span class="dot" style="background:#4a3fb5" data-page-node-id="Z1UVpk9mwSFNYzLXpvZYpc"></span>电子</span>
+      <span data-page-node-id="ffHSnbzRbGdBDofcYBu22d"><span class="hole-dot" data-page-node-id="l3Gg6RCqu7xp4JWWos6vYK"></span>空穴（空态）</span>
+      <span data-page-node-id="fbecNqHqATn9pC3LC9ZOtN"><span class="dot" style="background:#ef4444" data-page-node-id="wh0uzNgNLzaZvl06fSPdw3"></span>标记电子 X / Y / Z / A / B / C / E（沿能带：E → C → B → A → 空穴 → X → Y → Z）</span>
+      <span data-page-node-id="KhUjc8tCNQywJTLUS4UBeh">空心浅点 = 可占据的 k 状态格点</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="panel-title">面板一 ｜ 实际情况：相邻电子逐个跃入空位 <span class="tag">按一次 = 一个相邻电子跃入空位，空穴与该电子交换位置</span></div>
+    <div class="controls pctrl">
+      <button id="btnStepA">下一步 ▶</button>
+      <button id="btnBackA">◀ 上一步</button>
+      <button id="btnResetA">↺ 重置本面板</button>
+      <span class="tag">手动控制 · 点一次，一个电子跃入空位</span>
+    </div>
+    <canvas id="cs" width="920" height="400"></canvas>
+    <div style="border-left:5px solid #5b4fc4; background:#f7f6fd; border-radius:8px; padding:12px 16px; margin-top:10px;">
+      <p style="font-size:13.5px; line-height:1.95; color:#4b4b68;">
+        <b style="color:#4a3fb5;">实际过程：</b>一次只有一个相邻电子跃入空位，空穴出现在这个电子腾出的位置上，因此空穴与该电子的移动方向<b>相反</b>。
+        第一次点击：最左端的 X 沿能带跃入最右端的空位，二者交换位置；第二次：Y 跃入空穴（即 X 原来的位置）；第三次起 Z 及其余电子依次填入。
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="panel-title">面板二 ｜ 简化模型：全体电子同步平移 <span class="tag">同一条 E-k 能带；每个电子同时跳向相邻状态，空态随分布同向移动一格</span></div>
+    <div class="controls pctrl">
+      <button id="btnAutoB">▶ 自动移动</button>
+      <button id="btnResetB">↺ 重置本面板</button>
+      <div class="ctrl">间隔：
+        <select id="selSpeedB">
+          <option value="900">0.9 s / 步</option>
+          <option value="600" selected>0.6 s / 步</option>
+          <option value="350">0.35 s / 步</option>
+        </select>
+      </div>
+      <span class="tag">点击后自动连续移动</span>
+    </div>
+    <canvas id="ck" width="920" height="450"></canvas>
+    <div style="border-left:5px solid #c9402c; background:#fdf4f2; border-radius:8px; padding:12px 16px; margin-top:10px;">
+      <p style="font-size:13.5px; line-height:1.95; color:#4b4b68;">
+        <b style="color:#c9402c;">简化模型：</b>把外场下全体电子的整体平移等效为空穴自身移动一格，因此空穴与电子<b>同向</b>。
+        实际过程中空穴的移动来自相邻电子逐个跃入空位，空穴落在腾空的那一格上，与该电子<b>反向</b>。
+        两种说法基于同一 E-k 关系，描述的是同一个近满带空位的转移。
+      </p>
+    </div>
+  </div>
+
+  <footer>微电子学物理基础 · 近满带与空穴 · 交互式可视化</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var W = 920;
+  var P1 = {h:450, pl:70, pr:34, pt:76, pb:80};   // 面板二（简化模型）画布参数
+
+  var cs = document.getElementById("cs"), csx = cs.getContext("2d");   // 面板一：实际情况
+  var ck = document.getElementById("ck"), ckx = ck.getContext("2d");   // 面板二：简化模型
+
+  /* ---------- 离散 k 状态格点 ---------- */
+  var N = 13;                                   // 布里渊区内 13 个状态
+  var K = [];                                   // K[i] = 第 i 个状态的波矢
+  for (var i = 0; i < N; i++) K.push(-Math.PI + i * 2 * Math.PI / N);
+
+  function kx(k, pl, pr){ return pl + (k + Math.PI) / (2*Math.PI) * (W - pl - pr); }
+  function En(k){ return (1 - Math.cos(k)) / 2; }        // 归一化能量，底 0 顶 1
+  function yOf(en){ return P1.pt + (1 - en) * (P1.h - P1.pt - P1.pb); }
+  function mod(a, m){ return ((a % m) + m) % m; }
+
+  /* 状态列：两个面板共用同一套横坐标 */
+  var SLOT = (W - P1.pl - P1.pr) / N;            // 相邻状态列间距
+  function colX(i){ return P1.pl + i * SLOT; }   // 与 kx(K[i]) 完全一致
+
+  /* ---------- 电子与空穴：两个面板各自持有独立的状态与步数 ---------- */
+  var HOLE0 = 12;                                // 初始空态：最右端（带顶 +π/a 侧）
+  // 沿能带自下而上的顺序：E → C → B → A → 空穴 →（跨区边界）→ X → Y → Z
+  var labelSpec = {
+    0:{t:"X", c:"#ef4444"}, 1:{t:"Y", c:"#e8930c"}, 2:{t:"Z", c:"#10b981"},
+   11:{t:"A", c:"#3b82f6"}, 10:{t:"B", c:"#8b5cf6"}, 9:{t:"C", c:"#ec4899"}, 8:{t:"E", c:"#0e9f9f"}
+  };
+  var dir = 1, showLabels = true;
+
+  /* 面板一状态：slots 数组记录每个 k 态是否被占据，逐个电子跃入空位 */
+  var slots = [], holeA = HOLE0, lastSwap = null;
+  var stepA = 0, trailA = [], flashA = -10;
+  function buildA(){
+    slots = [];
+    for (var i = 0; i < N; i++){
+      if (i === HOLE0){ slots.push(null); continue; }
+      var sp = labelSpec[i];
+      slots.push({ label: sp ? sp.t : null, color: sp ? sp.c : "#4a3fb5" });
+    }
+    holeA = HOLE0; lastSwap = null; stepA = 0; trailA = []; flashA = -10;
+  }
+
+  /* 面板二状态：全体电子同占据索引，整体同步平移 */
+  var electrons = [], holeB = HOLE0;
+  var stepB = 0, trailB = [], flashB = -10;
+  function buildB(){
+    electrons = [];
+    for (var i = 0; i < N; i++){
+      if (i === HOLE0) continue;
+      var sp = labelSpec[i] || {t:null, c:"#4a3fb5"};
+      electrons.push({ idx:i, label:sp.t, color:sp.c, r: sp.t ? 8.5 : 7 });
+    }
+    holeB = HOLE0; stepB = 0; trailB = []; flashB = -10;
+  }
+  buildA(); buildB();
+
+  /* ---------- 面板一跃迁：一次只有一个相邻电子跃入空位 ---------- */
+  function doStepA(sign){
+    var delta = (dir > 0) ? -1 : 1;                 // 电子跃迁方向（索引增量）
+    var j = (sign > 0) ? mod(holeA - delta, N) : mod(holeA + delta, N);
+    var mover = slots[j];
+    trailA.push(holeA); if (trailA.length > 4) trailA.shift();
+    lastSwap = { from:j, to:holeA, label:(mover && mover.label) ? mover.label : "电子",
+                 color:(mover && mover.color) ? mover.color : "#4a3fb5" };
+    slots[holeA] = mover;
+    slots[j] = null;
+    holeA = j;
+    stepA += sign;
+    flashA = performance.now() / 1000;
+    paint();
+  }
+
+  /* ---------- 面板二跃迁：全体电子同步平移一格 ---------- */
+  function doStepB(){
+    var d = (dir > 0) ? -1 : 1;                     // ℰ>0 时电子向 −k 跃迁
+    trailB.push(holeB); if (trailB.length > 4) trailB.shift();
+    electrons.forEach(function(e){ e.idx = mod(e.idx + d, N); });
+    holeB = mod(holeB + d, N);
+    stepB += 1;
+    flashB = performance.now() / 1000;
+    paint();
+  }
+
+  /* ---------- 控件：两个面板分别控制 ---------- */
+  var btnStepA = document.getElementById("btnStepA"), btnBackA = document.getElementById("btnBackA");
+  var btnResetA = document.getElementById("btnResetA");
+  var btnAutoB = document.getElementById("btnAutoB"), btnResetB = document.getElementById("btnResetB");
+  var selSpeedB = document.getElementById("selSpeedB"), btnReset = document.getElementById("btnReset");
+  var selDir = document.getElementById("selDir"), ckLabel = document.getElementById("ckLabel");
+  var autoB = false, autoTimerB = null, gapB = 600;
+
+  // 面板一：手动逐步
+  btnStepA.addEventListener("click", function(){ doStepA(1); });
+  btnBackA.addEventListener("click", function(){ if (stepA > 0) doStepA(-1); });
+  btnResetA.addEventListener("click", function(){ stopAutoB(); buildA(); paint(); });
+
+  // 面板二：点击后自动连续移动
+  function stopAutoB(){ autoB = false; clearInterval(autoTimerB); btnAutoB.classList.remove("on"); btnAutoB.textContent = "▶ 自动移动"; }
+  function startAutoB(){ autoB = true; btnAutoB.classList.add("on"); btnAutoB.textContent = "⏸ 停止"; autoTimerB = setInterval(doStepB, gapB); }
+  btnAutoB.addEventListener("click", function(){ if (autoB) stopAutoB(); else startAutoB(); });
+  selSpeedB.addEventListener("change", function(){ gapB = parseInt(selSpeedB.value, 10); if (autoB){ stopAutoB(); startAutoB(); } });
+  btnResetB.addEventListener("click", function(){ stopAutoB(); buildB(); paint(); });
+
+  btnReset.addEventListener("click", function(){ stopAutoB(); buildA(); buildB(); paint(); });
+  selDir.addEventListener("change", function(){ dir = parseInt(selDir.value, 10); paint(); });
+  ckLabel.addEventListener("change", function(){ showLabels = ckLabel.checked; paint(); });
+  document.addEventListener("keydown", function(ev){
+    if (ev.key === "ArrowRight" || ev.key === " "){ ev.preventDefault(); doStepA(1); }
+    else if (ev.key === "ArrowLeft"){ ev.preventDefault(); if (stepA > 0) doStepA(-1); }
+  });
+
+  /* ---------- 绘图工具 ---------- */
+  function arrow(c, x, y, len, color, lw){
+    var ex = x + len, s = Math.sign(len) * 10;
+    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = lw || 4;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(ex, y); c.stroke();
+    c.beginPath(); c.moveTo(ex, y); c.lineTo(ex - s, y - 6); c.lineTo(ex - s, y + 6); c.closePath(); c.fill();
+  }
+  function curveArrow(c, x1, y1, x2, y2, cx, cy, color){
+    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 2.5;
+    c.beginPath(); c.moveTo(x1, y1); c.quadraticCurveTo(cx, cy, x2, y2); c.stroke();
+    var tx = x2 - cx, ty = y2 - cy, L = Math.sqrt(tx * tx + ty * ty) || 1;
+    tx /= L; ty /= L; var px = -ty, py = tx;
+    c.beginPath(); c.moveTo(x2, y2);
+    c.lineTo(x2 - tx * 11 + px * 6, y2 - ty * 11 + py * 6);
+    c.lineTo(x2 - tx * 11 - px * 6, y2 - ty * 11 - py * 6);
+    c.closePath(); c.fill();
+  }
+  function text(c, txt, x, y, color, font, align){
+    c.font = font || "bold 15px 'Microsoft YaHei'";
+    c.textAlign = align || "left"; c.textBaseline = "middle";
+    c.lineWidth = 4; c.strokeStyle = "rgba(255,255,255,.95)";
+    c.strokeText(txt, x, y); c.fillStyle = color; c.fillText(txt, x, y);
+  }
+
+  /* ---------- 面板二：简化模型（全体电子同步平移） ---------- */
+  function drawP1(now){
+    var c = ckx, H = P1.h, yBase = H - P1.pb, x0 = kx(0, P1.pl, P1.pr);
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#fbfaff"; c.fillRect(0, 0, W, H);
+
+    // 坐标轴
+    c.strokeStyle = "#a9a9c8"; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(x0, 20); c.lineTo(x0, yBase + 8); c.stroke();
+    c.beginPath(); c.moveTo(P1.pl - 14, yBase); c.lineTo(W - P1.pr, yBase); c.stroke();
+    c.fillStyle = "#77779c"; c.font = "15px 'Microsoft YaHei'"; c.textAlign = "center";
+    c.fillText("E", x0 + 18, 26);
+    c.fillText("k", W - P1.pr + 2, yBase + 20);
+    c.fillText("−π/a", P1.pl + 12, yBase + 20);
+    c.fillText("0", x0, yBase + 20);
+    c.fillText("π/a", W - P1.pr - 16, yBase + 20);
+
+    // 能带曲线
+    c.strokeStyle = "#5b4fc4"; c.lineWidth = 3;
+    c.beginPath();
+    for (var k = -Math.PI; k <= Math.PI + 1e-6; k += 0.02){
+      var px = kx(k, P1.pl, P1.pr), py = yOf(En(k));
+      if (k < -Math.PI + 1e-6) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.stroke();
+    text(c, "价带顶", P1.pl + 6, yOf(1) + 16, "#8a8aad", "13px 'Microsoft YaHei'");
+    text(c, "带底", x0 + 10, yOf(0) - 16, "#8a8aad", "13px 'Microsoft YaHei'");
+
+    // 电场箭头
+    c.strokeStyle = "#0e9f9f";
+    var fx = W - P1.pr - 190, fy = 30;
+    arrow(c, fx, fy, dir * 70, "#0e9f9f", 4);
+    text(c, "ℰ", fx + dir * 70 + dir * 16, fy, "#0e9f9f", "bold 17px 'Microsoft YaHei'", dir > 0 ? "left" : "right");
+    text(c, "ℏ·dk/dt = −e·ℰ", fx - 150, 30, "#77779c", "14px Consolas");
+    text(c, "面板二 ｜ 简化模型：全体电子同步平移一格", 16, 24, "#4a3fb5", "bold 14px 'Microsoft YaHei'");
+
+    // 状态列参考线（与面板二的列一一对应）
+    c.setLineDash([3,4]); c.lineWidth = 1;
+    for (var gi = 0; gi < N; gi++){
+      c.beginPath(); c.strokeStyle = "rgba(91,79,196,.20)";
+      c.moveTo(colX(gi), yOf(En(K[gi]))); c.lineTo(colX(gi), yBase); c.stroke();
+    }
+    c.setLineDash([]);
+
+    // 状态格点
+    for (var i = 0; i < N; i++){
+      var gx = kx(K[i], P1.pl, P1.pr), gy = yOf(En(K[i]));
+      c.beginPath(); c.arc(gx, gy, 4, 0, 6.284);
+      c.fillStyle = "#ffffff"; c.fill();
+      c.strokeStyle = "#c3bfe6"; c.lineWidth = 1.5; c.stroke();
+    }
+
+    // 空穴历史虚影
+    trailB.forEach(function(ti, n){
+      var gx = kx(K[ti], P1.pl, P1.pr), gy = yOf(En(K[ti]));
+      c.beginPath(); c.arc(gx, gy, 9, 0, 6.284);
+      c.strokeStyle = "rgba(224,83,61," + (0.10 + 0.10 * n) + ")"; c.lineWidth = 2; c.stroke();
+    });
+
+    // 电子
+    electrons.forEach(function(e){
+      var px = kx(K[e.idx], P1.pl, P1.pr), py = yOf(En(K[e.idx]));
+      c.beginPath(); c.arc(px, py, e.r, 0, 6.284);
+      c.fillStyle = e.color; c.fill();
+      c.strokeStyle = "rgba(255,255,255,.85)"; c.lineWidth = 1.5; c.stroke();
+      if (e.label && showLabels) text(c, e.label, px + 13, py - 15, e.color, "bold 17px 'Microsoft YaHei'");
+    });
+
+    // 空穴
+    var hx = kx(K[holeB], P1.pl, P1.pr), hy = yOf(En(K[holeB]));
+    var age = now - flashB;
+    if (age < 0.8){
+      c.beginPath(); c.arc(hx, hy, 13 + 14 * age, 0, 6.284);
+      c.strokeStyle = "rgba(224,83,61," + (0.55 * (1 - age / 0.8)) + ")"; c.lineWidth = 3; c.stroke();
+    }
+    c.beginPath(); c.arc(hx, hy, 11, 0, 6.284);
+    c.fillStyle = "#ffffff"; c.fill();
+    c.lineWidth = 4; c.strokeStyle = "#e0533d"; c.stroke();
+    text(c, "空穴", hx, (hy - 30 < 56) ? hy + 32 : hy - 30, "#e0533d", "bold 16px 'Microsoft YaHei'", "center");
+
+    // 区边界提示
+    text(c, "布里渊区边界：最右端与最左端等价，空穴跨过后从另一端重新出现",
+         W / 2, 44, "#8a8aad", "13px 'Microsoft YaHei'", "center");
+
+    // 跃迁方向提示
+    var d = (dir > 0) ? -1 : 1;
+    var dirTxt = d < 0 ? "−k ←" : "+k →";
+    text(c, "每步：全体电子与空穴同向跳一格  " + dirTxt, W / 2, H - 22, "#4a3fb5", "14.5px 'Microsoft YaHei'", "center");
+    text(c, "沿能带自下而上：E → C → B → A → 空穴 → X → Y → Z", W / 2, H - 42, "#6a6a8c", "13px 'Microsoft YaHei'", "center");
+  }
+
+  /* ---------- 面板一：实际情况（相邻电子逐个跃入空位） ---------- */
+  function drawPS(now){
+    var c = csx, H = 400, pt = 96, pb = 64, yBase = H - pb;
+    var eny = function(en){ return pt + (1 - en) * (H - pt - pb); };
+    var x0 = kx(0, P1.pl, P1.pr);
+    c.clearRect(0, 0, W, H);
+    c.fillStyle = "#fbfaff"; c.fillRect(0, 0, W, H);
+
+    // 坐标轴
+    c.strokeStyle = "#a9a9c8"; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(x0, 18); c.lineTo(x0, yBase + 8); c.stroke();
+    c.beginPath(); c.moveTo(P1.pl - 14, yBase); c.lineTo(W - P1.pr, yBase); c.stroke();
+    c.fillStyle = "#77779c"; c.font = "15px 'Microsoft YaHei'"; c.textAlign = "center";
+    c.fillText("E", x0 + 18, 24);
+    c.fillText("k", W - P1.pr + 2, yBase + 20);
+    c.fillText("−π/a", P1.pl + 12, yBase + 20);
+    c.fillText("0", x0, yBase + 20);
+    c.fillText("π/a", W - P1.pr - 16, yBase + 20);
+
+    // 能带曲线
+    c.strokeStyle = "#5b4fc4"; c.lineWidth = 3;
+    c.beginPath();
+    for (var k = -Math.PI; k <= Math.PI + 1e-6; k += 0.02){
+      var px = kx(k, P1.pl, P1.pr), py = eny(En(k));
+      if (k < -Math.PI + 1e-6) c.moveTo(px, py); else c.lineTo(px, py);
+    }
+    c.stroke();
+
+    text(c, "面板一 ｜ 实际情况：一次一个相邻电子跃入空位", 16, 24, "#4a3fb5", "bold 14px 'Microsoft YaHei'");
+    text(c, "布里渊区边界：最左端与最右端等价，X 与空穴因此相邻，空穴跨过后从另一端重新出现",
+         W / 2, 52, "#8a8aad", "13px 'Microsoft YaHei'", "center");
+
+    // 状态列参考线与格点
+    c.setLineDash([3,4]); c.lineWidth = 1;
+    for (var gi = 0; gi < N; gi++){
+      c.beginPath(); c.strokeStyle = "rgba(91,79,196,.20)";
+      c.moveTo(colX(gi), eny(En(K[gi]))); c.lineTo(colX(gi), yBase); c.stroke();
+    }
+    c.setLineDash([]);
+    for (var gi2 = 0; gi2 < N; gi2++){
+      c.beginPath(); c.arc(colX(gi2), eny(En(K[gi2])), 4, 0, 6.284);
+      c.fillStyle = "#ffffff"; c.fill();
+      c.strokeStyle = "#c3bfe6"; c.lineWidth = 1.5; c.stroke();
+    }
+
+    // 本次跃迁：电子沿能带跃入空位
+    if (lastSwap){
+      var x1 = colX(lastSwap.from), y1 = eny(En(K[lastSwap.from]));
+      var x2 = colX(lastSwap.to),   y2 = eny(En(K[lastSwap.to]));
+      var mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      var ux = mx - x0, uy = my - eny(0);          // 由能带内侧指向外侧
+      var ul = Math.sqrt(ux * ux + uy * uy) || 1;
+      ux /= ul; uy /= ul;
+      if (Math.abs(ux) < 1e-3 && Math.abs(uy) < 1e-3){ ux = 0; uy = -1; }
+      var cxP = mx + ux * 30, cyP = my + uy * 30;
+      curveArrow(c, x1, y1, x2, y2, cxP, cyP, lastSwap.color);
+      var apexY = Math.max(76, my + uy * 15 - 12);   // 曲线顶点附近，避开顶部标题与区边界说明
+      text(c, lastSwap.label + " 跃入空位", mx + ux * 15, apexY, lastSwap.color, "bold 14px 'Microsoft YaHei'", "center");
+    }
+
+    // 电子与空穴（按实际占据情况绘制）
+    for (var j = 0; j < N; j++){
+      var xj = colX(j), yj = eny(En(K[j])), it = slots[j];
+      if (it){
+        c.beginPath(); c.arc(xj, yj, it.label ? 8.5 : 7, 0, 6.284);
+        c.fillStyle = it.color; c.fill();
+        c.strokeStyle = "rgba(255,255,255,.9)"; c.lineWidth = 1.5; c.stroke();
+        if (it.label && showLabels) text(c, it.label, xj + 13, (yj - 15 < 92) ? yj + 26 : yj - 15, it.color, "bold 17px 'Microsoft YaHei'");
+      } else {
+        var age = now - flashA;
+        if (age < 0.8){
+          c.beginPath(); c.arc(xj, yj, 13 + 14 * age, 0, 6.284);
+          c.strokeStyle = "rgba(224,83,61," + (0.55 * (1 - age / 0.8)) + ")"; c.lineWidth = 3; c.stroke();
+        }
+        c.beginPath(); c.arc(xj, yj, 11, 0, 6.284);
+        c.fillStyle = "#ffffff"; c.fill();
+        c.lineWidth = 4; c.strokeStyle = "#e0533d"; c.stroke();
+        text(c, "空穴", xj, (yj - 30 < 72) ? yj + 32 : yj - 30, "#e0533d", "bold 16px 'Microsoft YaHei'", "center");
+      }
+    }
+
+    // 底部说明
+    var msg = lastSwap
+      ? "本次：" + lastSwap.label + " 跃入相邻空位，空穴移到 " + lastSwap.label + " 原来的位置 ⇒ 空穴与该电子移动方向相反"
+      : "初始：空穴在最右端，X 在最左端（区边界两端等价，故二者相邻）；第一次点击即 X 跃入空位、与空穴交换位置";
+    text(c, msg, W / 2, H - 18, "#4a3fb5", "14px 'Microsoft YaHei'", "center");
+  }
+
+  function paint(){
+    var now = performance.now() / 1000;
+    drawPS(now); drawP1(now);
+  }
+
+  // 空穴高亮动画（不推进状态，仅重绘）
+  (function loop(){ paint(); requestAnimationFrame(loop); })();
+})();
+</script>
+</body>
+</html>
