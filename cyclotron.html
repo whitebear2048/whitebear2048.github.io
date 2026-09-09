@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="eWxLf7qhvxJLIuvFxXSw5o">
+<head data-page-node-id="HsFByzLf7t3E7G2p0t0mmj">
+<meta charset="UTF-8" data-page-node-id="2YdPi0uwTvt51wpySDNE1T">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="YVwAfuAQjdin4aMaYGFG5X">
+<title>回旋共振实验</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --surface: #ffffff;
+    --surface-2: #eef2f8;
+    --text: #0f1c2e;
+    --muted: #5b6b82;
+    --primary: #2563eb;
+    --primary-soft: #e8effd;
+    --accent: #7c3aed;
+    --red: #e11d48;
+    --amber: #d97706;
+    --line: #dde5ef;
+    --shadow-sm: 0 2px 8px rgba(30, 64, 175, 0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.75;
+    font-size: 16px; -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1040px; margin: 0 auto; padding: 28px 24px 48px; }
+  .sec-head { margin-bottom: 22px; }
+  .sec-head h2 { font-size: 26px; font-weight: 800; }
+  .sec-head .lead { margin-top: 8px; color: var(--muted); font-size: 15px; }
+
+  .demo { background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px; box-shadow: var(--shadow-sm); margin-bottom: 22px; }
+  .demo h3 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .demo .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 14px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 820px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .controls { display: flex; flex-direction: column; gap: 12px; margin: 6px 0 14px; }
+  .ctrl-row { display: flex; align-items: center; gap: 12px; }
+  .ctrl-row label { font-size: 14px; font-weight: 600; min-width: 132px; }
+  .ctrl-row .val { font-size: 14px; font-weight: 800; color: var(--primary); min-width: 86px; text-align: right; }
+  input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 6px;
+    border-radius: 6px; background: linear-gradient(90deg, var(--primary), var(--accent)); outline: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px;
+    border-radius: 50%; background: #fff; border: 3px solid var(--primary); cursor: pointer;
+    box-shadow: 0 2px 6px rgba(37,99,235,.35); }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .btn { border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+    padding: 8px 16px; border-radius: 9px; font-size: 14px; cursor: pointer; transition: all .15s ease; white-space: nowrap; }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn.primary { background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border: none; font-weight: 700; }
+  .btn.toggle-on { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); font-weight: 700; }
+
+  .readout { display: flex; flex-wrap: wrap; gap: 10px 22px; background: var(--surface-2);
+    border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-size: 14px; }
+  .readout b { color: var(--primary); }
+  .status { font-weight: 800; }
+  .status.on { color: var(--red); }
+  .status.off { color: var(--muted); }
+
+  .demo svg { width: 100%; height: auto; display: block; }
+  /* MathJax 公式：不受上面 .demo svg 的 width:100% 拉伸；宽度上限为页面 1/4 */
+  .formula-box { display: inline-block; max-width: 25%; vertical-align: middle; }
+  .formula-box mjx-container { max-width: 100%; }
+  .formula-box mjx-container svg { width: 100%; height: auto; display: block; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+  .seg button { border: none; background: var(--surface); color: var(--muted); padding: 7px 16px;
+    font-size: 14px; cursor: pointer; }
+  .seg button.active { background: var(--primary); color: #fff; font-weight: 700; }
+  .note { font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 10px; }
+  .panel-cap { font-size: 13px; font-weight: 600; color: var(--muted); margin: 2px 0 8px; text-align: center; }
+  /* 图下注释：独立于 SVG 之外，避免 SVG 视口裁切导致左右显示不全 */
+  .panel-note { font-size: 12.5px; color: var(--muted); line-height: 1.7; text-align: center;
+    margin: 8px 2px 0; }
+  .note code { background: var(--surface-2); padding: 1px 6px; border-radius: 5px; color: var(--accent); font-weight: 700; }
+  .pill { display:inline-block; background: var(--primary-soft); color: var(--primary); font-weight:700;
+    padding: 2px 10px; border-radius: 999px; font-size: 13px; margin-right: 6px; }
+</style>
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+    svg: { scale: 0.62, fontCache: 'global' },
+    options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
+  };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body data-page-node-id="ZnYvFnULj9VrMgMsN3nca6">
+
+<div class="container" data-page-node-id="pCbunakRf1WUDjRhpdyWhb">
+
+  <div class="sec-head" data-page-node-id="mTekKHFiKusfGKYmI0RBWt">
+    <h2 data-page-node-id="uyxV87QnliR8PjOzft6Eb3">回旋共振实验</h2>
+    <div class="lead" data-page-node-id="grHECRtaBlLZu2LhBw4HM1">在恒定磁场 B 中，载流子做回旋运动；当微波频率 ω 与回旋频率 ω<sub data-page-node-id="bHhycsmsacIhcHhc4YK0ZL">c</sub> = eB/m* 相等时发生共振吸收。通过共振条件可测定载流子的有效质量 m*，并揭示能带的各向异性。</div>
+  </div>
+
+  <!-- 第一部分：实验原理与共振 -->
+  <div class="demo" data-page-node-id="atNByQou8WlUxrX1L1ttLA">
+    <h3 data-page-node-id="RZUwZ8TDgbA4BaRpJeDTID">一、实验原理与共振演示</h3>
+    <div class="sub" data-page-node-id="QBGUP6vyL1O5HKpI6EDxA9">拖动滑块改变磁场 B、有效质量 m* 与微波频率 f，观察轨道转速与吸收曲线的变化；使当前磁场滑到吸收峰处即发生共振。</div>
+
+    <div class="controls" data-page-node-id="e4uT1zW0csV8wD8UpauBGq">
+      <div class="ctrl-row" data-page-node-id="Rw4VoOxz1hsfDq9tcxIOyO">
+        <label data-page-node-id="IR1V9L6LL0nCmvdqQ3OiFp">磁场 B</label>
+        <input type="range" id="bRange" min="0.02" max="1.0" step="0.01" value="0.10" data-page-node-id="XZ8gmypC5D2rJC0sVE6lKs">
+        <span class="val" id="bVal" data-page-node-id="BzYuede9WYfL8S9aVkQxxN">0.10 T</span>
+      </div>
+      <div class="ctrl-row" data-page-node-id="aiKbLOf3Rd2PyiMjjCItmH">
+        <label data-page-node-id="GFuAT8GxBhXOkFtlmbAnGf">有效质量 m*</label>
+        <input type="range" id="mRange" min="0.05" max="1.0" step="0.01" value="0.20" data-page-node-id="TuDNTtj6tPgCer3oSMcC3j">
+        <span class="val" id="mVal" data-page-node-id="JzUPSwtb2592baoIGIo7hS">0.20 m₀</span>
+      </div>
+      <div class="ctrl-row" data-page-node-id="jKrvewrGMUfhvkqBjR0i40">
+        <label data-page-node-id="8nveFjs3xdDBC7Ape2khJs">微波频率 f</label>
+        <input type="range" id="fRange" min="2" max="80" step="1" value="75" data-page-node-id="KudmFYEeta3TiWhCoyQ8ID">
+        <span class="val" id="fVal" data-page-node-id="dInJS8Hggy2egyw9iaNeyP">75 GHz</span>
+      </div>
+    </div>
+
+    <div class="btn-row" data-page-node-id="sRW6b9xBEQgMIVHClUK54h">
+      <button class="btn" id="sweepBtn" data-page-node-id="I7NCLDCpWyuCmgiknFLD2R">自动扫场找共振</button>
+      <button class="btn" id="resetPrinciple" data-page-node-id="DD8hxqUNzz8rIy4ikw6aXv">复位</button>
+    </div>
+
+    <div class="setup" style="margin-top:18px;">
+      <div class="sub" style="margin-bottom:8px;">实验装置：微波源发出交变电磁场（微波），穿过置于磁场 B 中的半导体样品，右侧探测器测量透射功率。共振时样品强烈吸收微波，透射功率骤降，正是吸收曲线上峰的来源。</div>
+      <svg id="setupSvg" viewBox="0 0 820 220" role="img" aria-label="微波透射实验装置示意图"></svg>
+    </div>
+
+    <div class="grid2" style="margin-top:16px;" data-page-node-id="oIQoLUTtOzBCv6JjEZbS7I">
+      <div data-page-node-id="gVfBaHAG1syWsDBdJIjgg5">
+        <svg id="orbitSvg" viewBox="0 0 420 420" role="img" aria-label="磁场中电子回旋轨道" data-page-node-id="8BLhMpPPfunxB8zRIObGky"></svg>
+      </div>
+      <div id="curveWrap" data-page-node-id="Qp76Xw0SgwWYf2SmCOXgId" style="position:relative;">
+        <svg id="curveSvg" viewBox="0 0 420 340" role="img" aria-label="吸收-磁场曲线" data-page-node-id="cYltVltcHtmFIPzTX1ABQZ"></svg>
+        <div id="fcFormula" class="fc-formula" style="position:absolute; font-size:39px; color:#e11d48; font-weight:700; white-space:nowrap; pointer-events:none;">\( f_c = \frac{eB}{2\pi\, m^*} \)</div>
+      </div>
+    </div>
+
+    <div class="readout" data-page-node-id="Afu7x7WCBKZPAwEP91rqBw">
+      <span data-page-node-id="EshfU1ZMIH6qULjJ5PPqvq">回旋频率 f<sub data-page-node-id="8FJsqHQjsPgK6TG38HcDp1">c</sub> = <b id="fcOut" data-page-node-id="8J10Gtd02J0Sur9VlJcOlu">28.0</b> GHz</span>
+      <span data-page-node-id="mgP7dTKSxqq0LX50n5lo6N">共振磁场 B<sub data-page-node-id="Xdu9vrHovH9SZccEkQalyi">res</sub> = <b id="bresOut" data-page-node-id="GHTDvKozKjuube4LeUPYfP">0.10</b> T</span>
+      <span data-page-node-id="KdeDgVV9X1A48aMIncvWOz">状态：<span class="status off" id="statusOut" data-page-node-id="Kedu5nxR2lxLcLHhPpeNDU">未共振</span></span>
+    </div>
+  </div>
+
+  <!-- 第二部分：有效质量各向异性 -->
+  <div class="demo" data-page-node-id="CacDcBhjZxCPUDmn62Qc7l">
+    <h3 data-page-node-id="OAhMv7UmdtTjIZ2IXzOdIH">二、有效质量的各向异性（以 Si / Ge 为例）</h3>
+    <div class="sub" data-page-node-id="S1sBOeS9f2W49BMqEChwv0">椭球等能面的回旋有效质量随磁场相对晶轴的取向而变。改变 B 与晶轴 [100] 的夹角 θ，观察 m<sub data-page-node-id="KYjI1s5TYuBUJ7139tqyZE">c</sub>(θ) 的变化。</div>
+
+    <div class="controls" data-page-node-id="pBpXh5LPIsIWVcCZxyqfM1">
+      <div class="ctrl-row" data-page-node-id="6sFF9wcJ8qLe4jjFt6wAu0">
+        <label data-page-node-id="xOnmwW3nWnuNguTWzBvRmU">半导体材料</label>
+        <span class="seg" id="matSeg" data-page-node-id="yv6EM27iYs3HmJvNgrxcDD">
+          <button data-mat="Si" class="active" data-page-node-id="ExGVGFG88FOvOivdpZwstF">Si</button>
+          <button data-mat="Ge" data-page-node-id="toVBq6Nq7OYEXKGFfvyxhn">Ge</button>
+        </span>
+        <span class="val" id="matParam" style="min-width:auto;color:var(--muted);" data-page-node-id="pjBeYPl34iUyUKvrHoqCqM">m_l=0.98, m_t=0.19 (m₀)</span>
+      </div>
+      <div class="ctrl-row" data-page-node-id="w7pSA8RpngDsc9dqEyCyCT">
+        <label data-page-node-id="Mpj3ErEDk2b0Hlh3oGw6Gp">B 与 [100] 夹角 θ</label>
+        <input type="range" id="thetaRange" min="0" max="90" step="1" value="0" data-page-node-id="Fm7ZJAZQQIFiW5TLCbgtlg">
+        <span class="val" id="thetaVal" data-page-node-id="8RLqociBmVXVSTHqUbiUsx">0°</span>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:12px;" data-page-node-id="5tCAqMCkh3cjucBkX0D5ni">
+      <div data-page-node-id="FpsCeWRnLKgS9RiN5d0rW1">
+        <svg id="valleySvg" viewBox="0 0 440 360" role="img" aria-label="导带椭球谷与磁场方向" data-page-node-id="IwZb2I0KYoTdhPZsNOSpUp"></svg>
+      </div>
+      <div data-page-node-id="41qyFYiGnD86ui0gctvkuc">
+        <svg id="kcSvg" viewBox="0 0 440 360" role="img" aria-label="k空间回旋轨道与有效质量" data-page-node-id="kL3dmlta36X0HSuFXmHAPP"></svg>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:26px;" data-page-node-id="cutGrid">
+      <div data-page-node-id="cutPlanWrap">
+        <div class="panel-cap" data-page-node-id="cutPlanCap">夹角 θ 沿什么方向转（俯视 [100]–[010] 平面）</div>
+        <svg id="cutPlanSvg" viewBox="0 0 440 252" role="img" aria-label="磁场B在[100]-[010]平面内旋转" data-page-node-id="cutPlanSvg"></svg>
+        <div class="panel-note" data-page-node-id="cutPlanNote">
+          B 在 [100]–[010] 平面内旋转，青色虚线为垂直 B 的截面方向；θ=0 时 B∥[100]，θ=90° 时 B∥[010]。<br>
+          B∥[100]：[100] 椭球截面 = 圆（m<sub>c</sub>=m<sub>t</sub>），[010] 椭球截面 = 椭圆（m<sub>c</sub>=√(m<sub>l</sub>·m<sub>t</sub>)）；θ 增大两者反转。
+        </div>
+      </div>
+      <div data-page-node-id="cutWrap">
+        <div class="panel-cap" data-page-node-id="cutCap">垂直 B 的截面切椭球等能面（切在何处 → 圆 / 椭圆）</div>
+        <svg id="cutSvg" viewBox="0 0 440 252" role="img" aria-label="垂直B的截面切等能椭球" data-page-node-id="cutSvg"></svg>
+        <div class="panel-note" data-page-node-id="cutNote">
+          蓝色截面盘始终垂直于 B，随 B 一起转动；蓝色粗线圈为截面盘与等能椭球的交线，即回旋轨道。<br>
+          θ=0 时截面⊥椭球长轴 → 交线为圆（m<sub>c</sub>=m<sub>t</sub>）；θ=90° 时截面∥长轴 → 交线为椭圆（m<sub>c</sub>=√(m<sub>l</sub>·m<sub>t</sub>)）。
+        </div>
+      </div>
+    </div>
+
+    <div class="readout" data-page-node-id="cxfCkZwAsLD6IIT688C5KC">
+      <span data-page-node-id="uiwp6MMb95KpmzFpM14L5q">纵向质量 m<sub data-page-node-id="Mwgi8OR6qzHtKk9e78l9fu">l</sub> = <b id="mlOut" data-page-node-id="leJDmodQ6urIxxILHe6nki">0.98</b> m₀</span>
+      <span data-page-node-id="nH0bUP4m3DutGtm67jCR2X">横向质量 m<sub data-page-node-id="uNzngyckdhn7Bl0aByFVKo">t</sub> = <b id="mtOut" data-page-node-id="ZJ0fTGfh3w9FJtZ23hDUhh">0.19</b> m₀</span>
+      <span data-page-node-id="2iLT8oiXDvuYEwn3yuASBz">回旋有效质量 m<sub data-page-node-id="80dotrXESi6Fj8NICEo5Fe">c</sub>(θ) = <b id="mcOut" data-page-node-id="B7auKQKhG4R4ulnn5GPCjw">0.19</b> m₀</span>
+      <span data-page-node-id="rmOTMDI5hdMYq0mWmSrcgv">对应 f<sub data-page-node-id="fa7b0oydFttlD9UhgONi3B">c</sub> = <b id="fc2Out" data-page-node-id="oKFqKBpOKGdmynurHlsUv8">28.0</b> GHz（B=0.10 T）</span>
+    </div>
+
+    <div class="note" data-page-node-id="Hk94o2vSTg8qr5q2KnnjAi">
+      <span class="pill" data-page-node-id="ShwUxHbcemvtkNAEGAv5dB">关键结论</span>对 Si 的 6 个等价椭球谷，当 <code data-page-node-id="J2O5oW99SKAv5DwPTUJPjp">B ∥ [100]</code> 时，部分谷轴与 B 平行 → m<sub data-page-node-id="0DMDfJzB0cpIjrQja9TPLq">c</sub> = m<sub data-page-node-id="dBuBsA1FwwPa8QQmY8bNP7">t</sub> ≈ 0.19 m₀；部分谷轴与 B 垂直 → m<sub data-page-node-id="jGx3yDFmTR76ieYN1A0mpL">c</sub> = √(m<sub data-page-node-id="n7E5mVciihX71iVNHA7Mtd">l</sub>·m<sub data-page-node-id="8oEExEjQD7vDqG486cNtGb">t</sub>) ≈ 0.43 m₀。实验中观测到两个不同的共振质量，正是能带各向异性与多谷结构的直接证据。<br data-page-node-id="ZXuMlKppYAyZl14ikQsWTB">
+      一般取向：<span class="formula-box" style="font-size:18px;" data-page-node-id="bXkER3Cdj7RBIIyH7LYqC5">\( m_c(\theta) = \sqrt{\frac{m_l\, m_t^{2}}{m_l\cos^{2}\theta + m_t\sin^{2}\theta}} \)</span>，θ 为 B 与谷轴的夹角。
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  const NS = 'http://www.w3.org/2000/svg';
+  const E = 1.602e-19, M0 = 9.109e-31;
+  // f_c[Hz] = eB/(2π m*) = (2.799e10) * (B[T]/m*)，换算 GHz: f_c = 27.99 * B/m*
+  const K = 27.99;
+
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function txt(parent, x, y, s, o) {
+    const t = el('text', Object.assign({ x: x, y: y, 'font-size': 14, fill: '#5b6b82' }, o || {}), parent);
+    t.textContent = s; return t;
+  }
+
+  // ===== 状态 =====
+  const st = { B: 0.10, m: 0.20, f: 75, sweep: false, theta: 0, mat: 'Si' };
+  const MAT = {
+    Si: { ml: 0.98, mt: 0.19, val: 'Si', note: '6 个等价椭球谷（沿 ±x,±y,±z）' },
+    Ge: { ml: 1.64, mt: 0.082, val: 'Ge', note: '4 个等价椭球谷（L 点）' }
+  };
+
+  // ===== 第一部分：轨道 + 曲线 =====
+  const orbitSvg = document.getElementById('orbitSvg');
+  const curveSvg = document.getElementById('curveSvg');
+  const setupSvg = document.getElementById('setupSvg');
+  const bRange = document.getElementById('bRange');
+  const mRange = document.getElementById('mRange');
+  const fRange = document.getElementById('fRange');
+  const sweepBtn = document.getElementById('sweepBtn');
+  const resetPrinciple = document.getElementById('resetPrinciple');
+
+  let orbitAngle = 0;
+  let lastT = null;
+  const OX = 210, OY = 210, R = 150;
+
+  function fres() { return st.m * st.f / K; }              // 共振磁场 B_res = m*f / K
+  function fc() { return K * st.B / st.m; }                // f_c = K * B / m  (GHz)
+
+  function drawOrbit(resonant) {
+    orbitSvg.innerHTML = '';
+    // 坐标轴
+    el('line', { x1: 30, y1: OY, x2: 390, y2: OY, stroke: '#cdd8e6', 'stroke-width': 1 }, orbitSvg);
+    el('line', { x1: OX, y1: 30, x2: OX, y2: 390, stroke: '#cdd8e6', 'stroke-width': 1 }, orbitSvg);
+    // 磁场方向（出页/入页 符号散布）
+    const bg = resonant ? '#fde7ec' : '#eef2f8';
+    orbitSvg.appendChild(el('circle', { cx: OX, cy: OY, r: R + 14, fill: bg, opacity: 0.5 }));
+    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) {
+      const cx = OX + i * 55, cy = OY + j * 55;
+      if (i === 0 && j === 0) continue;
+      el('circle', { cx: cx, cy: cy, r: 3, fill: '#9fb2cc' }, orbitSvg);
+      txt(orbitSvg, cx + 6, cy + 4, '×', { 'font-size': 12, fill: '#7e93b3', 'font-weight': 700 });
+    }
+    // 轨道圆
+    el('circle', { cx: OX, cy: OY, r: R, fill: 'none', stroke: resonant ? '#e11d48' : '#1d4ed8', 'stroke-width': 2, 'stroke-dasharray': '4 4' }, orbitSvg);
+    // 电子
+    const ex = OX + R * Math.cos(orbitAngle);
+    const ey = OY + R * Math.sin(orbitAngle);
+    el('circle', { cx: ex, cy: ey, r: 9, fill: resonant ? '#f59e0b' : '#7c3aed' }, orbitSvg);
+    el('circle', { cx: ex, cy: ey, r: 14, fill: resonant ? '#f59e0b' : '#7c3aed', opacity: 0.25 }, orbitSvg);
+    // 速度方向（切向）
+    const vx = -Math.sin(orbitAngle), vy = Math.cos(orbitAngle);
+    el('line', { x1: ex, y1: ey, x2: ex + vx * 26, y2: ey + vy * 26, stroke: '#0f172a', 'stroke-width': 2.5 }, orbitSvg);
+    txt(orbitSvg, ex + vx * 34, ey + vy * 34, 'v', { 'font-size': 14, fill: '#0f172a', 'font-weight': 700, 'text-anchor': 'middle' });
+    // 洛伦兹力（指向圆心）
+    const lx = OX - ex, ly = OY - ey, ll = Math.hypot(lx, ly);
+    el('line', { x1: ex, y1: ey, x2: ex + lx / ll * 26, y2: ey + ly / ll * 26, stroke: '#e11d48', 'stroke-width': 2.5 }, orbitSvg);
+    txt(orbitSvg, ex + lx / ll * 34, ey + ly / ll * 34, 'F', { 'font-size': 14, fill: '#e11d48', 'font-weight': 700, 'text-anchor': 'middle' });
+    // 标注
+    txt(orbitSvg, OX, 22, '磁场 B ⊙（垂直纸面向外）', { 'font-size': 13, fill: '#475569', 'text-anchor': 'middle', 'font-weight': 700 });
+    txt(orbitSvg, 40, OY - 8, '电子回旋轨道', { 'font-size': 13, fill: '#475569' });
+    if (resonant) txt(orbitSvg, OX, 398, '⚡ 共振！微波能量被强烈吸收', { 'font-size': 14, fill: '#e11d48', 'text-anchor': 'middle', 'font-weight': 800 });
+  }
+
+  function drawCurve(resonant) {
+    curveSvg.innerHTML = '';
+    const x0 = 55, x1 = 400, y0 = 290, y1 = 35;
+    const Bmax = 1.0, G = 0.045;
+    const bres = fres();
+    const dist = Math.abs(st.B - bres);
+    const prox = Math.max(0, 1 - dist / 0.12);   // 0(远离) → 1(接近/共振)
+    // 坐标轴
+    el('line', { x1: x0, y1: y0, x2: x1, y2: y0, stroke: '#94a3b8', 'stroke-width': 1.5 }, curveSvg);
+    el('line', { x1: x0, y1: y0, x2: x0, y2: y1, stroke: '#94a3b8', 'stroke-width': 1.5 }, curveSvg);
+    txt(curveSvg, (x0 + x1) / 2, y0 + 32, '磁场 B (T)', { 'font-size': 13, fill: '#475569', 'text-anchor': 'middle', 'font-weight': 700 });
+    txt(curveSvg, x0 - 40, (y0 + y1) / 2, '吸收', { 'font-size': 13, fill: '#475569', 'text-anchor': 'middle', 'font-weight': 700, transform: 'rotate(-90 ' + (x0 - 40) + ' ' + ((y0 + y1) / 2) + ')' });
+    const X = b => x0 + (b / Bmax) * (x1 - x0);
+    const A = b => 1 / (1 + Math.pow((b - bres) / G, 2));
+    const Y = a => y0 - a * (y0 - y1);
+    // 曲线：远离时半透明，接近共振时逐渐清晰
+    let d = '';
+    for (let i = 0; i <= 200; i++) {
+      const b = Bmax * i / 200;
+      d += (i === 0 ? 'M' : 'L') + X(b).toFixed(1) + ' ' + Y(A(b)).toFixed(1) + ' ';
+    }
+    el('path', { d: d, fill: 'none', stroke: resonant ? '#e11d48' : '#2563eb', 'stroke-width': 2.6, opacity: (0.18 + 0.82 * prox).toFixed(2) }, curveSvg);
+    // 峰底填充：透明度随接近度
+    const fillOp = (0.04 + 0.13 * prox).toFixed(2);
+    let fill = 'M' + X(0) + ' ' + Y(0);
+    for (let i = 0; i <= 200; i++) { const b = Bmax * i / 200; fill += 'L' + X(b).toFixed(1) + ' ' + Y(A(b)).toFixed(1) + ' '; }
+    fill += 'L' + X(Bmax) + ' ' + Y(0) + ' Z';
+    el('path', { d: fill, fill: resonant ? 'rgba(225,29,72,' + fillOp + ')' : 'rgba(37,99,235,' + fillOp + ')' }, curveSvg);
+    // 共振峰位置竖线 + B_res 标注：仅接近共振时淡入（避免先标靶心）
+    if (bres <= Bmax && prox > 0.4) {
+      const bOp = ((prox - 0.4) / 0.6).toFixed(2);
+      el('line', { x1: X(bres), y1: y1, x2: X(bres), y2: y0, stroke: '#e11d48', 'stroke-width': 1.2, 'stroke-dasharray': '5 4', opacity: bOp }, curveSvg);
+      txt(curveSvg, X(bres), y1 - 6, 'B_res=' + bres.toFixed(2), { 'font-size': 12, fill: '#e11d48', 'text-anchor': 'middle', 'font-weight': 700, opacity: bOp });
+    }
+    // 当前 B 标记
+    const cx = X(st.B), cy = Y(A(st.B));
+    el('line', { x1: cx, y1: y0, x2: cx, y2: cy, stroke: '#0f172a', 'stroke-width': 1.5 }, curveSvg);
+    el('circle', { cx: cx, cy: cy, r: 7, fill: '#0f172a' }, curveSvg);
+    txt(curveSvg, cx, y0 + 16, '当前 B', { 'font-size': 12, fill: '#0f172a', 'text-anchor': 'middle', 'font-weight': 700 });
+  }
+
+  // 实验装置示意图：微波源 → 样品（磁场 B 中）→ 探测器
+  let setupPhase = 0;
+  function drawSetup(resonant, phase) {
+    setupSvg.innerHTML = '';
+    const midY = 110;
+    // 微波源
+    el('rect', { x: 14, y: 78, width: 46, height: 64, rx: 8, fill: '#eef2f8', stroke: '#94a3b8', 'stroke-width': 1.5 }, setupSvg);
+    txt(setupSvg, 37, 168, '微波源', { 'font-size': 12, fill: '#475569', 'text-anchor': 'middle', 'font-weight': 700 });
+    // 探测器
+    el('rect', { x: 760, y: 78, width: 46, height: 64, rx: 8, fill: '#eef2f8', stroke: '#94a3b8', 'stroke-width': 1.5 }, setupSvg);
+    txt(setupSvg, 783, 168, '探测器', { 'font-size': 12, fill: '#475569', 'text-anchor': 'middle', 'font-weight': 700 });
+    // 样品（磁场 B 中）
+    el('rect', { x: 360, y: 54, width: 84, height: 112, rx: 10, fill: 'rgba(124,58,237,0.12)', stroke: '#7c3aed', 'stroke-width': 1.8 }, setupSvg);
+    txt(setupSvg, 402, 100, '半导体', { 'font-size': 13, fill: '#7c3aed', 'text-anchor': 'middle', 'font-weight': 700 });
+    txt(setupSvg, 402, 118, '样品', { 'font-size': 13, fill: '#7c3aed', 'text-anchor': 'middle', 'font-weight': 700 });
+    // 磁场 B 符号（垂直纸面向里 ×）
+    el('circle', { cx: 402, cy: 76, r: 6, fill: 'none', stroke: '#e11d48', 'stroke-width': 1.5 }, setupSvg);
+    el('line', { x1: 398, y1: 72, x2: 406, y2: 80, stroke: '#e11d48', 'stroke-width': 1.5 }, setupSvg);
+    el('line', { x1: 406, y1: 72, x2: 398, y2: 80, stroke: '#e11d48', 'stroke-width': 1.5 }, setupSvg);
+    txt(setupSvg, 402, 152, 'B', { 'font-size': 12, fill: '#e11d48', 'text-anchor': 'middle', 'font-weight': 700 });
+    // 微波波（入射 / 透射）
+    const amp1 = 26;
+    const att = resonant ? 0.12 : 0.82;     // 共振时强烈吸收
+    const amp2 = amp1 * att;
+    const k = 0.12;
+    let d1 = '';
+    for (let x = 60; x <= 360; x += 4) { const y = midY + amp1 * Math.sin((x - 60) * k - phase); d1 += (x === 60 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' '; }
+    el('path', { d: d1, fill: 'none', stroke: '#2563eb', 'stroke-width': 2.4 }, setupSvg);
+    let d2 = '';
+    for (let x = 444; x <= 758; x += 4) { const y = midY + amp2 * Math.sin((x - 444) * k - phase); d2 += (x === 444 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' '; }
+    el('path', { d: d2, fill: 'none', stroke: resonant ? '#e11d48' : '#2563eb', 'stroke-width': 2.4 }, setupSvg);
+    // 标注
+    txt(setupSvg, 210, 56, '交变电磁场 E（微波）入射', { 'font-size': 12, fill: '#475569', 'text-anchor': 'middle' });
+    const P = Math.round(att * att * 100);
+    const pColor = resonant ? '#e11d48' : '#2563eb';
+    txt(setupSvg, 783, 48, '透射功率', { 'font-size': 12, fill: pColor, 'text-anchor': 'middle', 'font-weight': 700 });
+    txt(setupSvg, 783, 66, 'P=' + P + '%', { 'font-size': 14, fill: pColor, 'text-anchor': 'middle', 'font-weight': 800 });
+    if (resonant) txt(setupSvg, 410, 200, '共振：样品强烈吸收微波 → 透射功率骤降', { 'font-size': 12.5, fill: '#e11d48', 'text-anchor': 'middle', 'font-weight': 700 });
+    else txt(setupSvg, 410, 200, '未共振：微波几乎透射，探测器接收功率较高', { 'font-size': 12.5, fill: '#475569', 'text-anchor': 'middle' });
+  }
+
+  function updatePrinciple() {
+    const bres = fres();
+    const resonant = Math.abs(st.B - bres) < 0.03;
+    drawOrbit(resonant);
+    drawCurve(resonant);
+    drawSetup(resonant, setupPhase);
+    document.getElementById('fcOut').textContent = fc().toFixed(1);
+    document.getElementById('bresOut').textContent = bres.toFixed(2);
+    const so = document.getElementById('statusOut');
+    if (resonant) { so.textContent = '共振（吸收峰）'; so.className = 'status on'; }
+    else if (Math.abs(st.B - bres) < 0.07) { so.textContent = '接近共振（峰显现中）'; so.className = 'status off'; }
+    else { so.textContent = '未共振'; so.className = 'status off'; }
+    positionFormula();
+  }
+
+  // 共振条件公式（MathJax 渲染）定位到吸收峰旁；仅移动位置，不重绘 SVG
+  function positionFormula() {
+    const fdiv = document.getElementById('fcFormula');
+    const wrap = document.getElementById('curveWrap');
+    if (!fdiv || !wrap) return;
+    const r = curveSvg.getBoundingClientRect();
+    const wr = wrap.getBoundingClientRect();
+    const bres = fres();
+    const sx = r.width / 420, sy = r.height / 340;
+    const X = b => 55 + b * (400 - 55);
+    let px = X(bres) + 12, tx = 'translate(0,-50%)';
+    if (bres > 0.55) { px = X(bres) - 12; tx = 'translate(-100%,-50%)'; }
+    const py = 35 + 22;
+    fdiv.style.left = ((r.left - wr.left) + px * sx) + 'px';
+    fdiv.style.top = ((r.top - wr.top) + py * sy) + 'px';
+    fdiv.style.transform = tx;
+  }
+
+  // ===== 第二部分：各向异性 =====
+  const valleySvg = document.getElementById('valleySvg');
+  const kcSvg = document.getElementById('kcSvg');
+  const thetaRange = document.getElementById('thetaRange');
+  const matSeg = document.getElementById('matSeg');
+
+  function mcOf(mat, thetaDeg) {
+    const th = thetaDeg * Math.PI / 180, ml = mat.ml, mt = mat.mt;
+    return Math.sqrt(ml * mt * mt / (ml * Math.cos(th) * Math.cos(th) + mt * Math.sin(th) * Math.sin(th)));
+  }
+
+  function drawValley() {
+    valleySvg.innerHTML = '';
+    const mat = MAT[st.mat];
+    const cx = 220, cy = 180, s = 70;
+    // 立方体（示意）
+    const corners = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+    const proj = p => [cx + (p[0] + p[1]) * 0.5 * s * 0.7, cy + (p[1] - p[0]) * 0.25 * s * 0.7 - p[2] * 0.5 * s];
+    const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    edges.forEach(e => {
+      const a = proj(corners[e[0]]), b = proj(corners[e[1]]);
+      el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: '#cdd8e6', 'stroke-width': 1 }, valleySvg);
+    });
+    // 三条晶轴 [100]、[010]、[001]：画在椭球下层，标签置于轴端外侧（避免与椭球重叠）
+    const AXES = [
+      { v: [1, 0, 0], label: '[100]', color: '#1d4ed8' },
+      { v: [0, 1, 0], label: '[010]', color: '#15803d' },
+      { v: [0, 0, 1], label: '[001]', color: '#0e7490' }
+    ];
+    const AL = 3.4; // 晶轴示意长度（立方体半边长取 1），保证轴端伸出椭球之外
+    AXES.forEach(a => {
+      const p0 = proj([-a.v[0] * AL, -a.v[1] * AL, -a.v[2] * AL]);
+      const p1 = proj([a.v[0] * AL, a.v[1] * AL, a.v[2] * AL]);
+      el('line', { x1: p0[0], y1: p0[1], x2: p1[0], y2: p1[1], stroke: a.color,
+        'stroke-width': 1.6, 'stroke-dasharray': '7 4', opacity: 0.65 }, valleySvg);
+      const dx = p1[0] - cx, dy = p1[1] - cy, nn = Math.hypot(dx, dy) || 1;
+      const lx = p1[0] + dx / nn * 22, ly = p1[1] + dy / nn * 22 + 4;
+      const anchor = dx > 8 ? 'start' : (dx < -8 ? 'end' : 'middle');
+      txt(valleySvg, lx, ly, a.label, { 'font-size': 12.5, fill: a.color, 'font-weight': 800, 'text-anchor': anchor });
+    });
+    // 6 个椭球谷（沿 ±x,±y,±z），每个画成沿其谷轴方向拉长的旋转椭圆
+    const axes = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    const originP = proj([0,0,0]);
+    const R = 1.7; // 椭球中心离体心的径向距离（放大以减少重叠，方便讲解）
+    axes.forEach(ax => {
+      const c = proj([ax[0]*R, ax[1]*R, ax[2]*R]);
+      // 谷轴在投影中的方向角（长轴应沿此方向、径向朝外）
+      const phi = Math.atan2(c[1] - originP[1], c[0] - originP[0]) * 180 / Math.PI;
+      // 旋转椭圆：局部 x 轴(长轴 rx) 沿谷轴，y 轴(短轴 ry) 为横向
+      el('ellipse', { cx: c[0], cy: c[1], rx: 30, ry: 15, fill: 'rgba(124,58,237,0.18)',
+        stroke: '#7c3aed', 'stroke-width': 1.5,
+        transform: 'rotate(' + phi.toFixed(2) + ' ' + c[0].toFixed(1) + ' ' + c[1].toFixed(1) + ')' }, valleySvg);
+    });
+    // 磁场 B 方向（在 x-y 平面内与 [100] 夹角 θ），用与晶轴一致的中心投影
+    const th = st.theta * Math.PI / 180;
+    const k1 = 0.5 * s * 0.7, k2 = 0.25 * s * 0.7;
+    let bx = (Math.cos(th) + Math.sin(th)) * k1;
+    let by = (Math.sin(th) - Math.cos(th)) * k2;
+    const bn = Math.hypot(bx, by) || 1;
+    const blen = 82; // 略短于晶轴示意长度，避免 B 标签压住 [100] 标注
+    bx = bx / bn * blen; by = by / bn * blen;
+    el('line', { x1: cx, y1: cy, x2: cx + bx, y2: cy + by, stroke: '#e11d48', 'stroke-width': 3 }, valleySvg);
+    txt(valleySvg, cx + bx + 7, cy + by - 3, 'B', { 'font-size': 14, fill: '#e11d48', 'font-weight': 800 });
+    txt(valleySvg, cx, 350, mat.val + '：' + mat.note, { 'font-size': 12.5, fill: '#475569', 'text-anchor': 'middle' });
+    txt(valleySvg, cx, 332, '紫红色为导带椭球谷，红色箭头为磁场 B，虚线为三个晶轴', { 'font-size': 12, fill: '#7e93b3', 'text-anchor': 'middle' });
+  }
+
+  let kcAngle = 0;
+  function drawKC() {
+    kcSvg.innerHTML = '';
+    const mat = MAT[st.mat];
+    const mc = mcOf(mat, st.theta);
+    const cx = 220, cy = 175;
+    const ml = mat.ml, mt = mat.mt;
+    const th = st.theta * Math.PI / 180;
+    const R0 = 75;
+    // 轨道椭圆半轴（k 空间，半径 ∝ √有效质量，使面积 ∝ m_c）：
+    //   沿 z：始终横向质量 → a_v ∝ √m_t
+    //   在 x-y 平面内、垂直于 B：a_u ∝ 1/√(sin²θ/m_l + cos²θ/m_t)
+    const ry = R0 * Math.sqrt(mt);
+    const rx = R0 / Math.sqrt(Math.sin(th) * Math.sin(th) / ml + Math.cos(th) * Math.cos(th) / mt);
+    // 轨道椭圆：固定不动（k 空间回旋轨道由有效质量张量决定，位置不随时间变化）
+    kcSvg.appendChild(el('ellipse', { cx: cx, cy: cy, rx: rx, ry: ry, fill: 'rgba(37,99,235,0.10)', stroke: '#2563eb', 'stroke-width': 2.4 }));
+    // 中心
+    el('circle', { cx: cx, cy: cy, r: 4, fill: '#0f172a' }, kcSvg);
+    // 电子点：沿固定轨道走（轨道本身即完整路径，不画拖尾）
+    const px = cx + rx * Math.cos(kcAngle), py = cy + ry * Math.sin(kcAngle);
+    el('circle', { cx: px, cy: py, r: 8, fill: '#7c3aed' }, kcSvg);
+    el('circle', { cx: px, cy: py, r: 13, fill: '#7c3aed', opacity: 0.25 }, kcSvg);
+    txt(kcSvg, cx, 28, 'k 空间回旋轨道（形状随取向变化，示意）', { 'font-size': 12.5, fill: '#475569', 'text-anchor': 'middle', 'font-weight': 700 });
+    txt(kcSvg, cx, 330, 'm_c(θ) = ' + mc.toFixed(3) + ' m₀', { 'font-size': 15, fill: '#7c3aed', 'text-anchor': 'middle', 'font-weight': 800 });
+    txt(kcSvg, cx, 352, 'θ = ' + st.theta + '°', { 'font-size': 13, fill: '#475569', 'text-anchor': 'middle' });
+    document.getElementById('mlOut').textContent = ml.toFixed(2);
+    document.getElementById('mtOut').textContent = mt.toFixed(2);
+    document.getElementById('mcOut').textContent = mc.toFixed(3);
+    document.getElementById('fc2Out').textContent = (K * st.B / mc).toFixed(1);
+  }
+
+  // 图A：俯视 [100]–[010] 平面，展示 θ 沿什么方向转
+  function drawCutPlan() {
+    const s = document.getElementById('cutPlanSvg');
+    if (!s) return;
+    s.innerHTML = '';
+    const cx = 220, cy = 130;
+    // 背景轴：[100] 水平、[010] 竖直（标签右端对齐，避免超出视口被裁切）
+    el('line', { x1: 44, y1: cy, x2: 392, y2: cy, stroke: '#1d4ed8', 'stroke-width': 3 }, s);
+    let t1 = el('text', { x: 396, y: cy - 8, 'font-size': 14, 'font-weight': 700, fill: '#1d4ed8', 'text-anchor': 'end' }, s); t1.textContent = '[100]';
+    el('line', { x1: cx, y1: 240, x2: cx, y2: 16, stroke: '#9ca3af', 'stroke-width': 2.5 }, s);
+    let t2 = el('text', { x: cx + 8, y: 12, 'font-size': 14, 'font-weight': 700, fill: '#6b7280' }, s); t2.textContent = '[010]';
+    const th = st.theta * Math.PI / 180;
+    const Lx = 70, Lz = 31; // 等能椭球屏幕半轴：纵向(∥长轴) / 横向
+    // 两个等能椭球（长轴分别沿 [100]、[010]）
+    el('ellipse', { cx: cx, cy: cy, rx: Lx, ry: Lz, fill: 'rgba(124,58,237,0.10)', stroke: '#7c3aed', 'stroke-width': 1.4 }, s);
+    el('line', { x1: cx - Lx, y1: cy, x2: cx + Lx, y2: cy, stroke: '#1d4ed8', 'stroke-width': 2.2 }, s);
+    el('ellipse', { cx: cx, cy: cy, rx: Lz, ry: Lx, fill: 'rgba(124,58,237,0.10)', stroke: '#7c3aed', 'stroke-width': 1.4 }, s);
+    el('line', { x1: cx, y1: cy - Lx, x2: cx, y2: cy + Lx, stroke: '#15803d', 'stroke-width': 2.2 }, s);
+    // B 方向（屏幕：从 [100] 水平向上转 θ）
+    const Lb = 118;
+    const bxe = cx + Lb * Math.cos(th), bye = cy - Lb * Math.sin(th);
+    el('line', { x1: cx, y1: cy, x2: bxe, y2: bye, stroke: '#e11d48', 'stroke-width': 3.5 }, s);
+    el('circle', { cx: bxe, cy: bye, r: 4, fill: '#e11d48' }, s);
+    let tb = el('text', { x: bxe + 8, y: bye - 4, 'font-size': 14, 'font-weight': 700, fill: '#be123c' }, s); tb.textContent = 'B';
+    // θ 弧
+    const r0 = 74;
+    const ax = cx + r0, ay = cy;
+    const bx = cx + r0 * Math.cos(th), by = cy - r0 * Math.sin(th);
+    el('path', { d: 'M ' + ax + ' ' + ay + ' A ' + r0 + ' ' + r0 + ' 0 0 0 ' + bx.toFixed(1) + ' ' + by.toFixed(1), fill: 'none', stroke: '#e11d48', 'stroke-width': 1.5 }, s);
+    let tt = el('text', { x: cx + 30, y: cy - 20, 'font-size': 13, 'font-weight': 700, fill: '#e11d48' }, s); tt.textContent = 'θ';
+    // 垂直 B 方向（屏幕单位向量）：B=(cosθ,-sinθ)，垂直 = (sinθ, cosθ)
+    const pxv = Math.sin(th), pyv = Math.cos(th);
+    // ⊥B 垂直面线（贯穿，随 B 旋转）
+    const Lperp = 108;
+    el('line', { x1: (cx - pxv * Lperp).toFixed(1), y1: (cy - pyv * Lperp).toFixed(1), x2: (cx + pxv * Lperp).toFixed(1), y2: (cy + pyv * Lperp).toFixed(1), stroke: '#0ea5e9', 'stroke-width': 2.4, 'stroke-dasharray': '6 4' }, s);
+    let tperp = el('text', { x: (cx + pxv * Lperp + 5).toFixed(1), y: (cy + pyv * Lperp).toFixed(1), 'font-size': 12, 'font-weight': 700, fill: '#0369a1' }, s); tperp.textContent = '⊥B 垂直面';
+  }
+
+  // 图B：垂直 B 的截面切等能椭球，交线随 θ 由圆变椭圆
+  function drawCut() {
+    const s = document.getElementById('cutSvg');
+    if (!s) return;
+    s.innerHTML = '';
+    const mat = MAT[st.mat];
+    const ml = mat.ml, mt = mat.mt;
+    const th = st.theta * Math.PI / 180;
+    const cx = 220, cy = 120;
+    const Lb0 = 78;
+    const Lx = Lb0 * Math.sqrt(ml), Lz = Lb0 * Math.sqrt(mt);
+    const proj = (x, y, z) => [cx + (x - y) * 0.5, cy + (x + y) * 0.25 - z * 0.5];
+    // 背景轴
+    const pa = proj(98, 0, 0), pb = proj(-98, 0, 0);
+    el('line', { x1: pa[0].toFixed(1), y1: pa[1].toFixed(1), x2: pb[0].toFixed(1), y2: pb[1].toFixed(1), stroke: '#94a3b8', 'stroke-width': 1, 'stroke-dasharray': '4 4' }, s);
+    let t100 = el('text', { x: (pa[0] + 4).toFixed(1), y: (pa[1] - 4).toFixed(1), 'font-size': 12, 'font-weight': 700, fill: '#1d4ed8' }, s); t100.textContent = '[100]';
+    const pc = proj(0, 98, 0), pd = proj(0, -98, 0);
+    el('line', { x1: pc[0].toFixed(1), y1: pc[1].toFixed(1), x2: pd[0].toFixed(1), y2: pd[1].toFixed(1), stroke: '#94a3b8', 'stroke-width': 1, 'stroke-dasharray': '4 4' }, s);
+    let t010 = el('text', { x: (pc[0] - 30).toFixed(1), y: (pc[1] - 2).toFixed(1), 'font-size': 12, 'font-weight': 700, fill: '#15803d' }, s); t010.textContent = '[010]';
+    el('line', { x1: cx, y1: cy - 66, x2: cx, y2: cy + 66, stroke: '#cbd5e1', 'stroke-width': 1, 'stroke-dasharray': '2 4' }, s);
+    let tz = el('text', { x: cx + 6, y: cy - 62, 'font-size': 11, fill: '#94a3b8' }, s); tz.textContent = '[001] 出屏幕';
+    // 等能椭球：屏幕上的轮廓是 3D 椭球的正交投影，按 Y = M·k 算得（与截面曲线一致，长轴 = 0.559 Lx）
+    const aB = 0.25 * (Lx * Lx + Lz * Lz);
+    const bB = 0.125 * (Lx * Lx - Lz * Lz);
+    const cB = 0.0625 * Lx * Lx + 0.3125 * Lz * Lz;
+    const detB = aB * cB - bB * bB;
+    let eD = '';
+    for (let i = 0; i <= 72; i++) {
+      const psi = 2 * Math.PI * i / 72;
+      const cs = Math.cos(psi), sn = Math.sin(psi);
+      const v = Math.max((cB * cs * cs - 2 * bB * cs * sn + aB * sn * sn) / detB, 1e-6);
+      const sc = Math.sqrt(v);
+      eD += (i === 0 ? 'M' : 'L') + (cx + cs / sc).toFixed(1) + ' ' + (cy + sn / sc).toFixed(1) + ' ';
+    }
+    eD += 'Z';
+    el('path', { d: eD, fill: 'rgba(124,58,237,0.10)', stroke: '#7c3aed', 'stroke-width': 1.3 }, s);
+    const e1a = proj(Lx, 0, 0), e1b = proj(-Lx, 0, 0);
+    el('line', { x1: e1a[0].toFixed(1), y1: e1a[1].toFixed(1), x2: e1b[0].toFixed(1), y2: e1b[1].toFixed(1), stroke: '#1d4ed8', 'stroke-width': 2.5 }, s);
+    // 垂直 B 的截面盘（含 z 方向的平面）：盘所在方向必须垂直 B，即 (-sinθ, cosθ, 0)
+    const Au = 1 / Math.sqrt(Math.sin(th) * Math.sin(th) / (Lx * Lx) + Math.cos(th) * Math.cos(th) / (Lz * Lz));
+    const C1 = proj(-Au * Math.sin(th), Au * Math.cos(th), Lz);
+    const C2 = proj(-Au * Math.sin(th), Au * Math.cos(th), -Lz);
+    const C3 = proj(Au * Math.sin(th), -Au * Math.cos(th), -Lz);
+    const C4 = proj(Au * Math.sin(th), -Au * Math.cos(th), Lz);
+    el('polygon', { points: C1.map(v => v.toFixed(1)).join(',') + ' ' + C2.map(v => v.toFixed(1)).join(',') + ' ' + C3.map(v => v.toFixed(1)).join(',') + ' ' + C4.map(v => v.toFixed(1)).join(','), fill: 'rgba(37,99,235,0.10)', stroke: 'rgba(37,99,235,0.4)', 'stroke-width': 1 }, s);
+    // 截面交线（圆/椭圆）
+    let dcut = '';
+    for (let i = 0; i <= 64; i++) {
+      const ph = 2 * Math.PI * i / 64;
+      const u = Au * Math.cos(ph), w = Lz * Math.sin(ph);
+      const sx = cx - 0.5 * u * (Math.sin(th) + Math.cos(th));
+      const sy = cy + 0.25 * u * (Math.cos(th) - Math.sin(th)) - 0.5 * w;
+      dcut += (i === 0 ? 'M' : 'L') + sx.toFixed(1) + ' ' + sy.toFixed(1) + ' ';
+    }
+    dcut += 'Z';
+    el('path', { d: dcut, fill: 'rgba(37,99,235,0.20)', stroke: '#2563eb', 'stroke-width': 2.6 }, s);
+    // B 箭头
+    const Lb = 72;
+    const Pb = proj(Lb * Math.cos(th), Lb * Math.sin(th), 0);
+    el('line', { x1: cx, y1: cy, x2: Pb[0].toFixed(1), y2: Pb[1].toFixed(1), stroke: '#e11d48', 'stroke-width': 3 }, s);
+    let tb = el('text', { x: (Pb[0] + 5).toFixed(1), y: (Pb[1] - 3).toFixed(1), 'font-size': 13, 'font-weight': 700, fill: '#be123c' }, s); tb.textContent = 'B';
+    // θ 弧：[100]-[010] 平面在屏幕上是椭圆轨迹，不能用 SVG 圆弧；改为对投影点采样
+    const r0 = 44;
+    let arcD = '';
+    for (let i = 0; i <= 32; i++) {
+      const phi = th * i / 32;
+      const p = proj(r0 * Math.cos(phi), r0 * Math.sin(phi), 0);
+      arcD += (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ' ';
+    }
+    el('path', { d: arcD, fill: 'none', stroke: '#e11d48', 'stroke-width': 1.3 }, s);
+    let tth = el('text', { x: (cx + 16).toFixed(1), y: (cy - 26).toFixed(1), 'font-size': 12, 'font-weight': 700, fill: '#e11d48' }, s); tth.textContent = 'θ';
+  }
+
+  // ===== 动画循环 =====
+  function frame(now) {
+    if (lastT === null) lastT = now;
+    let dt = (now - lastT) / 1000; lastT = now; dt = Math.min(dt, 0.05);
+    // 轨道转速 ∝ ω_c，限幅
+    const wvis = Math.min(18, 6 * st.B / st.m);
+    orbitAngle += wvis * dt;
+    // k 轨道转速 ∝ ω_c(m_c)
+    const mat = MAT[st.mat];
+    const mc = mcOf(mat, st.theta);
+    const wkc = Math.min(18, 6 * st.B / mc);
+    kcAngle += wkc * dt;
+    // 自动扫场
+    if (st.sweep) {
+      st.B += dt * 0.18;
+      if (st.B > 1.0) st.B = 0.02;
+      bRange.value = st.B.toFixed(2);
+      document.getElementById('bVal').textContent = st.B.toFixed(2) + ' T';
+      updatePrinciple();
+    }
+    // 仅重绘动态部分（保持曲线/谷图不闪）
+    const resonant = Math.abs(st.B - fres()) < 0.03;
+    drawOrbit(resonant);
+    drawKC();
+    setupPhase += dt * 3.0;
+    drawSetup(resonant, setupPhase);
+    requestAnimationFrame(frame);
+  }
+
+  // ===== 事件 =====
+  bRange.addEventListener('input', () => { st.B = parseFloat(bRange.value); document.getElementById('bVal').textContent = st.B.toFixed(2) + ' T'; updatePrinciple(); });
+  mRange.addEventListener('input', () => { st.m = parseFloat(mRange.value); document.getElementById('mVal').textContent = st.m.toFixed(2) + ' m₀'; updatePrinciple(); });
+  fRange.addEventListener('input', () => { st.f = parseFloat(fRange.value); document.getElementById('fVal').textContent = st.f + ' GHz'; updatePrinciple(); });
+  sweepBtn.addEventListener('click', () => {
+    st.sweep = !st.sweep;
+    sweepBtn.classList.toggle('toggle-on', st.sweep);
+    sweepBtn.textContent = st.sweep ? '停止扫场' : '自动扫场找共振';
+  });
+  resetPrinciple.addEventListener('click', () => {
+    st.sweep = false; sweepBtn.classList.remove('toggle-on'); sweepBtn.textContent = '自动扫场找共振';
+    st.B = 0.10; st.m = 0.20; st.f = 75;
+    bRange.value = 0.10; mRange.value = 0.20; fRange.value = 75;
+    document.getElementById('bVal').textContent = '0.10 T';
+    document.getElementById('mVal').textContent = '0.20 m₀';
+    document.getElementById('fVal').textContent = '75 GHz';
+    updatePrinciple();
+  });
+  thetaRange.addEventListener('input', () => { st.theta = parseInt(thetaRange.value, 10); document.getElementById('thetaVal').textContent = st.theta + '°'; drawValley(); drawKC(); drawCutPlan(); drawCut(); });
+  matSeg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    st.mat = b.dataset.mat;
+    matSeg.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    document.getElementById('matParam').textContent = 'm_l=' + MAT[st.mat].ml + ', m_t=' + MAT[st.mat].mt + ' (m₀)';
+    drawValley(); drawKC(); drawCutPlan(); drawCut();
+  }));
+
+  // 初始化
+  updatePrinciple();
+  drawValley();
+  drawKC();
+  drawCutPlan();
+  drawCut();
+  window.addEventListener('resize', positionFormula);
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
