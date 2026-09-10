@@ -73,11 +73,10 @@
 
   <header data-page-node-id="NWtFs3oPeTl0n3a7bXykBE">
     <h1>k 空间中电子与空穴的运动：实际情况 vs 简化模型</h1>
-    <p>近满带在外电场 ℰ 下的演化：面板一为实际情况（手动逐步，相邻电子逐个跃入空位），面板二为简化模型（点击后自动连续平移）</p>
   </header>
 
   <div class="card" data-page-node-id="A9iFrBnGr9E7qB1IABY61C">
-    <div class="panel-title">控制台 <span class="tag">面板一与面板二各自独立步进</span></div>
+    <div class="panel-title">控制台</div>
     <div class="controls">
       <button id="btnReset">↺ 全部重置</button>
       <div class="ctrl">电场方向：
@@ -88,34 +87,25 @@
       </div>
       <div class="ctrl"><label><input type="checkbox" id="ckLabel" checked> 显示字母标记</label></div>
     </div>
-    <div class="tip">键盘 → 或 空格 推进面板一，← 后退面板一（两面板互不干扰）</div>
     <div class="legend" data-page-node-id="BIDxWqV9WxkYQZIy1DETSm">
       <span data-page-node-id="MjwDod9c74zrwOEE6u5Abe"><span class="dot" style="background:#4a3fb5" data-page-node-id="Z1UVpk9mwSFNYzLXpvZYpc"></span>电子</span>
       <span data-page-node-id="ffHSnbzRbGdBDofcYBu22d"><span class="hole-dot" data-page-node-id="l3Gg6RCqu7xp4JWWos6vYK"></span>空穴（空态）</span>
-      <span data-page-node-id="fbecNqHqATn9pC3LC9ZOtN"><span class="dot" style="background:#ef4444" data-page-node-id="wh0uzNgNLzaZvl06fSPdw3"></span>标记电子 X / Y / Z / A / B / C / E（沿能带：E → C → B → A → 空穴 → X → Y → Z）</span>
-      <span data-page-node-id="KhUjc8tCNQywJTLUS4UBeh">空心浅点 = 可占据的 k 状态格点</span>
+      <span data-page-node-id="fbecNqHqATn9pC3LC9ZOtN"><span class="dot" style="background:#ef4444" data-page-node-id="wh0uzNgNLzaZvl06fSPdw3"></span>标记电子 X / Y / Z / A / B / C / E</span>
     </div>
   </div>
 
   <div class="card">
-    <div class="panel-title">面板一 ｜ 实际情况：相邻电子逐个跃入空位 <span class="tag">按一次 = 一个相邻电子跃入空位，空穴与该电子交换位置</span></div>
+    <div class="panel-title">实际情况：相邻电子逐个跃入空位</div>
     <div class="controls pctrl">
       <button id="btnStepA">下一步 ▶</button>
       <button id="btnBackA">◀ 上一步</button>
       <button id="btnResetA">↺ 重置本面板</button>
-      <span class="tag">手动控制 · 点一次，一个电子跃入空位</span>
     </div>
     <canvas id="cs" width="920" height="400"></canvas>
-    <div style="border-left:5px solid #5b4fc4; background:#f7f6fd; border-radius:8px; padding:12px 16px; margin-top:10px;">
-      <p style="font-size:13.5px; line-height:1.95; color:#4b4b68;">
-        <b style="color:#4a3fb5;">实际过程：</b>一次只有一个相邻电子跃入空位，空穴出现在这个电子腾出的位置上，因此空穴与该电子的移动方向<b>相反</b>。
-        第一次点击：最左端的 X 沿能带跃入最右端的空位，二者交换位置；第二次：Y 跃入空穴（即 X 原来的位置）；第三次起 Z 及其余电子依次填入。
-      </p>
-    </div>
   </div>
 
   <div class="card">
-    <div class="panel-title">面板二 ｜ 简化模型：全体电子同步平移 <span class="tag">同一条 E-k 能带；每个电子同时跳向相邻状态，空态随分布同向移动一格</span></div>
+    <div class="panel-title">简化模型：全体电子同步平移</div>
     <div class="controls pctrl">
       <button id="btnAutoB">▶ 自动移动</button>
       <button id="btnResetB">↺ 重置本面板</button>
@@ -126,19 +116,10 @@
           <option value="350">0.35 s / 步</option>
         </select>
       </div>
-      <span class="tag">点击后自动连续移动</span>
     </div>
     <canvas id="ck" width="920" height="450"></canvas>
-    <div style="border-left:5px solid #c9402c; background:#fdf4f2; border-radius:8px; padding:12px 16px; margin-top:10px;">
-      <p style="font-size:13.5px; line-height:1.95; color:#4b4b68;">
-        <b style="color:#c9402c;">简化模型：</b>把外场下全体电子的整体平移等效为空穴自身移动一格，因此空穴与电子<b>同向</b>。
-        实际过程中空穴的移动来自相邻电子逐个跃入空位，空穴落在腾空的那一格上，与该电子<b>反向</b>。
-        两种说法基于同一 E-k 关系，描述的是同一个近满带空位的转移。
-      </p>
-    </div>
   </div>
 
-  <footer>微电子学物理基础 · 近满带与空穴 · 交互式可视化</footer>
 </div>
 
 <script>
@@ -263,14 +244,26 @@
     c.beginPath(); c.moveTo(ex, y); c.lineTo(ex - s, y - 6); c.lineTo(ex - s, y + 6); c.closePath(); c.fill();
   }
   function curveArrow(c, x1, y1, x2, y2, cx, cy, color){
-    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 2.5;
+    // 先描一层白色底衬：跃迁弧线即使与 E-k 能带曲线靠近（甚至颜色相近），也能清晰分辨
+    c.lineCap = "round"; c.lineJoin = "round";
+    c.strokeStyle = "rgba(255,255,255,.95)"; c.lineWidth = 7;
+    c.beginPath(); c.moveTo(x1, y1); c.quadraticCurveTo(cx, cy, x2, y2); c.stroke();
+    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = 3;
     c.beginPath(); c.moveTo(x1, y1); c.quadraticCurveTo(cx, cy, x2, y2); c.stroke();
     var tx = x2 - cx, ty = y2 - cy, L = Math.sqrt(tx * tx + ty * ty) || 1;
     tx /= L; ty /= L; var px = -ty, py = tx;
+    // 箭头：先铺稍大的白色三角做衬底，再填色，避免压在能带上看不清
+    c.beginPath(); c.moveTo(x2, y2);
+    c.lineTo(x2 - tx * 15 + px * 8.5, y2 - ty * 15 + py * 8.5);
+    c.lineTo(x2 - tx * 15 - px * 8.5, y2 - ty * 15 - py * 8.5);
+    c.closePath();
+    c.fillStyle = "rgba(255,255,255,.95)"; c.fill();
     c.beginPath(); c.moveTo(x2, y2);
     c.lineTo(x2 - tx * 11 + px * 6, y2 - ty * 11 + py * 6);
     c.lineTo(x2 - tx * 11 - px * 6, y2 - ty * 11 - py * 6);
-    c.closePath(); c.fill();
+    c.closePath();
+    c.fillStyle = color; c.fill();
+    c.lineCap = "butt";
   }
   function text(c, txt, x, y, color, font, align){
     c.font = font || "bold 15px 'Microsoft YaHei'";
@@ -313,7 +306,6 @@
     arrow(c, fx, fy, dir * 70, "#0e9f9f", 4);
     text(c, "ℰ", fx + dir * 70 + dir * 16, fy, "#0e9f9f", "bold 17px 'Microsoft YaHei'", dir > 0 ? "left" : "right");
     text(c, "ℏ·dk/dt = −e·ℰ", fx - 150, 30, "#77779c", "14px Consolas");
-    text(c, "面板二 ｜ 简化模型：全体电子同步平移一格", 16, 24, "#4a3fb5", "bold 14px 'Microsoft YaHei'");
 
     // 状态列参考线（与面板二的列一一对应）
     c.setLineDash([3,4]); c.lineWidth = 1;
@@ -359,15 +351,6 @@
     c.lineWidth = 4; c.strokeStyle = "#e0533d"; c.stroke();
     text(c, "空穴", hx, (hy - 30 < 56) ? hy + 32 : hy - 30, "#e0533d", "bold 16px 'Microsoft YaHei'", "center");
 
-    // 区边界提示
-    text(c, "布里渊区边界：最右端与最左端等价，空穴跨过后从另一端重新出现",
-         W / 2, 44, "#8a8aad", "13px 'Microsoft YaHei'", "center");
-
-    // 跃迁方向提示
-    var d = (dir > 0) ? -1 : 1;
-    var dirTxt = d < 0 ? "−k ←" : "+k →";
-    text(c, "每步：全体电子与空穴同向跳一格  " + dirTxt, W / 2, H - 22, "#4a3fb5", "14.5px 'Microsoft YaHei'", "center");
-    text(c, "沿能带自下而上：E → C → B → A → 空穴 → X → Y → Z", W / 2, H - 42, "#6a6a8c", "13px 'Microsoft YaHei'", "center");
   }
 
   /* ---------- 面板一：实际情况（相邻电子逐个跃入空位） ---------- */
@@ -398,9 +381,28 @@
     }
     c.stroke();
 
-    text(c, "面板一 ｜ 实际情况：一次一个相邻电子跃入空位", 16, 24, "#4a3fb5", "bold 14px 'Microsoft YaHei'");
-    text(c, "布里渊区边界：最左端与最右端等价，X 与空穴因此相邻，空穴跨过后从另一端重新出现",
-         W / 2, 52, "#8a8aad", "13px 'Microsoft YaHei'", "center");
+    // 布里渊区边界等能提示：k = −π/a 与 k = +π/a 处在能带的同一高度、能量相同（周期边界下实为同一状态），
+    // 因此电子可以由此端直接跨越到彼端——这正是面板一中 X（最左端）与空穴（最右端）"相邻"的依据。
+    (function(){
+      var yTop = eny(1), xL = colX(0), xR = W - P1.pr;
+      c.save();
+      c.strokeStyle = "#8a8aad"; c.lineWidth = 1.6;
+      c.setLineDash([6, 4]);
+      c.beginPath(); c.moveTo(xL, yTop); c.lineTo(xR, yTop); c.stroke();
+      c.setLineDash([]);
+      c.beginPath();
+      c.moveTo(xL, yTop - 7); c.lineTo(xL, yTop + 7);
+      c.moveTo(xR, yTop - 7); c.lineTo(xR, yTop + 7);
+      c.stroke();
+      // 右端虚线圆环：与左端格点（k = −π/a）对应的是同一个状态
+      c.beginPath(); c.arc(xR, yTop, 5, 0, 6.284);
+      c.setLineDash([3, 3]); c.stroke();
+      c.setLineDash([]);
+      c.restore();
+      // y = yTop-28：让开跨区大弧线的顶点（顶点 y≈88，含白色底衬上沿约 84）
+      text(c, "布里渊区边界：两端 −π/a 与 +π/a 同一高度、E 相同（同一状态），电子可直接跨越",
+           W / 2, yTop - 28, "#6a6a8c", "bold 13px 'Microsoft YaHei'", "center");
+    })();
 
     // 状态列参考线与格点
     c.setLineDash([3,4]); c.lineWidth = 1;
@@ -420,14 +422,20 @@
       var x1 = colX(lastSwap.from), y1 = eny(En(K[lastSwap.from]));
       var x2 = colX(lastSwap.to),   y2 = eny(En(K[lastSwap.to]));
       var mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-      var ux = mx - x0, uy = my - eny(0);          // 由能带内侧指向外侧
-      var ul = Math.sqrt(ux * ux + uy * uy) || 1;
-      ux /= ul; uy /= ul;
-      if (Math.abs(ux) < 1e-3 && Math.abs(uy) < 1e-3){ ux = 0; uy = -1; }
-      var cxP = mx + ux * 30, cyP = my + uy * 30;
+      // 凸向：取弦的法向、且背离 E-k 能带曲线的一侧。
+      // 原做法沿"能带底 → 中点"的径向抬起，在带底附近该方向几乎与能带平行，弧线便贴在曲线上；
+      // 改为按局部能带位置判断，保证弧线始终鼓向远离能带的一侧（相邻态约离开 20 px）。
+      var ddx = x2 - x1, ddy = y2 - y1, dl = Math.sqrt(ddx * ddx + ddy * ddy) || 1;
+      var nx = -ddy / dl, ny = ddx / dl;                     // 弦的单位法向
+      var kMid = -Math.PI + (mx - P1.pl) / (W - P1.pl - P1.pr) * 2 * Math.PI;
+      var yBand = eny(En(kMid));                             // 同一 x 处能带曲线的高度
+      if (ny * (my - yBand) < 0){ nx = -nx; ny = -ny; }      // 统一取"远离能带"的一侧
+      var off = dl > 200 ? 30 : 40;                          // 跨区大跨越（X↔空穴）已足够明显，保持原幅度
+      var cxP = mx + nx * off, cyP = my + ny * off;
       curveArrow(c, x1, y1, x2, y2, cxP, cyP, lastSwap.color);
-      var apexY = Math.max(76, my + uy * 15 - 12);   // 曲线顶点附近，避开顶部标题与区边界说明
-      text(c, lastSwap.label + " 跃入空位", mx + ux * 15, apexY, lastSwap.color, "bold 14px 'Microsoft YaHei'", "center");
+      // 文字固定在画布顶部空白带（y=30）：能带顶端在 y=96，圆点字母与"空穴"文字最低也只到 y≈72，
+      // 原位置（曲线顶点）会紧贴圆弧、空穴圆圈与"空穴"文字，故上移到顶部条带，与颜色保持对应。
+      text(c, lastSwap.label + " 跃入空位", 16, 30, lastSwap.color, "bold 15px 'Microsoft YaHei'");
     }
 
     // 电子与空穴（按实际占据情况绘制）
@@ -451,11 +459,6 @@
       }
     }
 
-    // 底部说明
-    var msg = lastSwap
-      ? "本次：" + lastSwap.label + " 跃入相邻空位，空穴移到 " + lastSwap.label + " 原来的位置 ⇒ 空穴与该电子移动方向相反"
-      : "初始：空穴在最右端，X 在最左端（区边界两端等价，故二者相邻）；第一次点击即 X 跃入空位、与空穴交换位置";
-    text(c, msg, W / 2, H - 18, "#4a3fb5", "14px 'Microsoft YaHei'", "center");
   }
 
   function paint(){
